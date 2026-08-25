@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>regningoutbounn — Admin</title>
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Log ind</h1>
+    <p>Adgang til QR-panelet for regningoutbounn.dk</p>
+    <div class="login-error" id="loginError">Forkert adgangskode</div>
+    <label for="loginPassword">Adgangskode</label>
+    <input type="password" id="loginPassword" placeholder="••••••••">
+    <button class="primary" id="loginBtn" style="width:100%;text-align:center;">Log ind</button>
+  </div>
+</div>
+
+<div class="app" id="adminApp" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand">regningoutbounn
+      <small>QR Panel · Internt</small>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="session">Live session</button>
+      <button class="nav-btn" data-view="customers">Kunder</button>
+      <button class="nav-btn" data-view="settings">Skærm & besked</button>
+    </nav>
+    <div class="sidebar-foot">
+      Viser på jeres eget domæne.<br>
+      <a href="/display" target="_blank" style="color:var(--mint);">Åbn skærm-visning ↗</a>
+    </div>
+  </aside>
+
+  <main>
+    <section id="view-session">
+      <div class="page-head">
+        <h1>Live session</h1>
+        <p>Styr hvilken QR-kode og besked der vises for kunder lige nu.</p>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="card">
+            <div class="status-row">
+              <span class="dot" id="statusDot"></span>
+              <span class="status-text" id="statusText">Offline — intet vises</span>
+              <button class="toggle" id="liveToggle">Sæt live</button>
+            </div>
+
+            <label for="qrTarget">QR-kode peger på (URL)</label>
+            <input type="url" id="qrTarget" placeholder="https://dit-andet-domæne.dk/side">
+            <p class="helper">Dette er linket kunden lander på, når de scanner koden på skærmen.</p>
+
+            <label for="stopTitle">Titel over QR-koden</label>
+            <input type="text" id="stopTitle" placeholder="F.eks. 'Scan for dit tilbud'">
+
+            <label for="stopMsg">Besked under QR-koden</label>
+            <textarea id="stopMsg" rows="2" placeholder="F.eks. 'Gyldig i denne butik i dag'"></textarea>
+
+            <div class="actions">
+              <button class="primary" id="saveBtn">Gem og opdater skærm</button>
+              <button class="ghost" id="newSessionBtn">Ny session-ID</button>
+              <span class="save-msg" id="saveMsg">Gemt ✓ — skærmen opdaterer nu</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Session-info</h2>
+            <p class="sub">Denne session vises på jeres domæne, når den er sat live.</p>
+            <div class="row">
+              <div>
+                <label>Session-ID</label>
+                <input type="text" id="sessionId" readonly>
+              </div>
+              <div>
+                <label>Sidst opdateret</label>
+                <input type="text" id="lastUpdated" readonly>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="kiosk">
+            <div class="kiosk-bar">
+              <span class="dot" id="kioskDot"></span>
+              <span id="kioskLabel">LIVE PREVIEW — SÅDAN SER KUNDEN DET</span>
+            </div>
+            <div class="screen" id="previewScreen">
+              <div class="screen-overlay"></div>
+              <div class="eyebrow">regningoutbounn.dk</div>
+              <h3 id="previewTitle">Scan for dit tilbud</h3>
+              <div class="qr-box" id="previewQrBox" style="display:none;"><div id="qrcode"></div></div>
+              <div class="offline-msg" id="previewOfflineMsg" style="display:none;">
+                <strong id="previewOfflineTitle">Ingen aktiv session</strong>
+                <span id="previewOfflineBody">Kom tilbage senere</span>
+              </div>
+              <div class="footline" id="previewMsg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-customers" style="display:none;">
+      <div class="page-head">
+        <h1>Kunder i gang</h1>
+        <p>Kunder der har scannet en QR-kode og er i gang med et flow.</p>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Kunde-ref</th><th>Session</th><th>Startet</th><th>Status</th></tr></thead>
+          <tbody id="customerRows"></tbody>
+        </table>
+        <div class="empty" id="customerEmpty" style="display:none;">
+          Ingen aktive kunder endnu. Kunder dukker op her, når de scanner en live QR-kode.
+        </div>
+      </div>
+      <div class="card">
+        <h2>Tilføj test-kunde</h2>
+        <p class="sub">Til test af panelet — simulerer en kunde der scanner.</p>
+        <div class="actions">
+          <button class="primary" id="addCustomerBtn">Tilføj test-kunde</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" style="display:none;">
+      <div class="page-head">
+        <h1>Skærm & besked</h1>
+        <p>Standardudseende for skærmen når ingen specifik session er sat.</p>
+      </div>
+      <div class="card">
+        <h2>Baggrund</h2>
+        <p class="sub">Vælg farvetone til skærmen kunderne ser.</p>
+        <div class="bg-swatches" id="bgSwatches"></div>
+      </div>
+      <div class="card">
+        <h2>Standardbesked (offline)</h2>
+        <p class="sub">Vises når ingen session er live.</p>
+        <label for="offlineTitle">Titel</label>
+        <input type="text" id="offlineTitle" placeholder="Ingen aktiv session">
+        <label for="offlineBody">Undertekst</label>
+        <textarea id="offlineBody" rows="2" placeholder="Kom tilbage senere"></textarea>
+        <div class="actions">
+          <button class="primary" id="saveSettingsBtn">Gem indstillinger</button>
+          <span class="save-msg" id="settingsSaveMsg">Gemt ✓</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>regningoutbounn</title>
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="display-wrap">
+  <div class="screen display-screen" id="screen">
+    <div class="screen-overlay"></div>
+    <div class="eyebrow">regningoutbounn.dk</div>
+    <h3 id="title">Ingen aktiv session</h3>
+    <div class="qr-box" id="qrBox" style="display:none;"><div id="qrcode"></div></div>
+    <div class="offline-msg" id="offlineMsg" style="display:none;">
+      <strong id="offlineTitle">Ingen aktiv session</strong>
+      <span id="offlineBody">Kom tilbage senere</span>
+    </div>
+    <div class="footline" id="msg"></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/display.js"></script>
+</body>
+</html>
