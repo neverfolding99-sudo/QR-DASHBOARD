@@ -10,7 +10,7 @@ let lastUpdateAt = null;
 let socketConnected = false;
 
 function signatureOf(state){
-  return JSON.stringify([state.live, state.target, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody]);
+  return JSON.stringify([state.live, state.target, state.sessionId, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody]);
 }
 
 function render(state){
@@ -42,7 +42,9 @@ function render(state){
 
     const el = document.getElementById('qrcode');
     el.innerHTML = '';
-    const url = state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk';
+    const url = state.sessionId
+      ? `${window.location.origin}/r/${state.sessionId}`
+      : (state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk');
     new QRCode(el, {
       text: url, width: 220, height: 220,
       colorDark: '#132E28', colorLight: '#ffffff',

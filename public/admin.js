@@ -84,9 +84,10 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    ['session','customers','settings'].forEach(v=>{
+    ['session','templates','schedule','stats','customers','settings'].forEach(v=>{
       document.getElementById('view-'+v).style.display = (v===btn.dataset.view) ? 'block':'none';
     });
+    if(btn.dataset.view === 'stats') loadStats();
   });
 });
 
@@ -136,6 +137,8 @@ function render(){
 
   renderCustomers();
   renderSwatches();
+  renderTemplates();
+  renderSchedule();
 
   document.getElementById('offlineTitle').value = state.offlineTitle || '';
   document.getElementById('offlineBody').value = state.offlineBody || '';
@@ -229,3 +232,153 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
   render();
   flashSave('settingsSaveMsg');
 });
+
+// --- Templates ---
+function renderTemplates(){
+  const wrap = document.getElementById('templateRows');
+  const empty = document.getElementById('templateEmpty');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  const templates = state.templates || [];
+  if(!templates.length){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  templates.slice().reverse().forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);';
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:500;color:var(--forest-deep);margin-bottom:2px;">${escapeHtml(t.name)}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);">${escapeHtml(t.title || '')} ${t.target ? '· ' + escapeHtml(t.target) : ''}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="ghost apply-tpl" data-id="${t.id}">Brug</button>
+        <button class="ghost delete-tpl" data-id="${t.id}" style="color:#B4453A;">Slet</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('.apply-tpl').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state = await apiPost(`/api/templates/${btn.dataset.id}/apply`, {});
+      render();
+      flashApplied(btn);
+    });
+  });
+  wrap.querySelectorAll('.delete-tpl').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const res = await fetch(`/api/templates/${btn.dataset.id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-password': adminPassword }
+      });
+      if(res.ok){
+        state.templates = state.templates.filter(t => t.id !== btn.dataset.id);
+        render();
+      }
+    });
+  });
+}
+
+function flashApplied(btn){
+  const original = btn.textContent;
+  btn.textContent = 'Brugt ✓';
+  setTimeout(() => { btn.textContent = original; }, 1500);
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+document.getElementById('saveAsTemplateBtn').addEventListener('click', async () => {
+  const name = prompt('Navn på skabelonen (fx "Julekampagne" eller "Åbningstilbud"):');
+  if(!name || !name.trim()) return;
+  const target = document.getElementById('qrTarget').value.trim();
+  const title = document.getElementById('stopTitle').value.trim();
+  const message = document.getElementById('stopMsg').value.trim();
+  const template = await apiPost('/api/templates', { name, title, message, target, bg: state.bg });
+  if(!state.templates) state.templates = [];
+  state.templates.push(template);
+  render();
+});
+
+// --- Scheduling ---
+function toLocalInputValue(isoOrNull){
+  if(!isoOrNull) return '';
+  const d = new Date(isoOrNull);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderSchedule(){
+  const sch = state.schedule || { enabled:false, start:null, end:null };
+  const dot = document.getElementById('scheduleDot');
+  const text = document.getElementById('scheduleStatusText');
+  const toggle = document.getElementById('scheduleToggle');
+  if(!dot) return;
+
+  dot.classList.toggle('live', !!sch.enabled);
+  toggle.textContent = sch.enabled ? 'Slå fra' : 'Slå til';
+  toggle.classList.toggle('is-live', !!sch.enabled);
+  text.textContent = sch.enabled ? 'Planlægning aktiv' : 'Planlægning slået fra';
+
+  const startEl = document.getElementById('scheduleStart');
+  const endEl = document.getElementById('scheduleEnd');
+  if(document.activeElement !== startEl) startEl.value = toLocalInputValue(sch.start);
+  if(document.activeElement !== endEl) endEl.value = toLocalInputValue(sch.end);
+}
+
+document.getElementById('scheduleToggle').addEventListener('click', async () => {
+  const sch = state.schedule || { enabled:false, start:null, end:null };
+  const startVal = document.getElementById('scheduleStart').value;
+  const endVal = document.getElementById('scheduleEnd').value;
+  const newSchedule = await apiPost('/api/schedule', {
+    enabled: !sch.enabled,
+    start: startVal ? new Date(startVal).toISOString() : sch.start,
+    end: endVal ? new Date(endVal).toISOString() : sch.end
+  });
+  state.schedule = newSchedule;
+  render();
+});
+
+document.getElementById('saveScheduleBtn').addEventListener('click', async () => {
+  const startVal = document.getElementById('scheduleStart').value;
+  const endVal = document.getElementById('scheduleEnd').value;
+  if(!startVal || !endVal){
+    alert('Vælg både start- og sluttidspunkt.');
+    return;
+  }
+  const newSchedule = await apiPost('/api/schedule', {
+    enabled: state.schedule ? state.schedule.enabled : false,
+    start: new Date(startVal).toISOString(),
+    end: new Date(endVal).toISOString()
+  });
+  state.schedule = newSchedule;
+  render();
+  flashSave('scheduleSaveMsg');
+});
+
+// --- Stats ---
+async function loadStats(){
+  const stats = await apiGet('/api/stats');
+  document.getElementById('statTotal').value = stats.totalScans;
+  document.getElementById('statToday').value = stats.last24h;
+
+  const rows = document.getElementById('statRows');
+  const empty = document.getElementById('statEmpty');
+  rows.innerHTML = '';
+  if(!stats.recent.length){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  stats.recent.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${fmtTime(s.at)}</td><td>${escapeHtml(s.session)}</td>`;
+    rows.appendChild(tr);
+  });
+}

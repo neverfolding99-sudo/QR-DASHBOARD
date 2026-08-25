@@ -27,6 +27,9 @@
     </div>
     <nav class="nav">
       <button class="nav-btn active" data-view="session">Live session</button>
+      <button class="nav-btn" data-view="templates">Skabeloner</button>
+      <button class="nav-btn" data-view="schedule">Planlægning</button>
+      <button class="nav-btn" data-view="stats">Statistik</button>
       <button class="nav-btn" data-view="customers">Kunder</button>
       <button class="nav-btn" data-view="settings">Skærm & besked</button>
     </nav>
@@ -65,6 +68,7 @@
             <div class="actions">
               <button class="primary" id="saveBtn">Gem og opdater skærm</button>
               <button class="ghost" id="newSessionBtn">Ny session-ID</button>
+              <button class="ghost" id="saveAsTemplateBtn">Gem som skabelon</button>
               <span class="save-msg" id="saveMsg">Gemt ✓ — skærmen opdaterer nu</span>
             </div>
           </div>
@@ -103,6 +107,71 @@
               <div class="footline" id="previewMsg"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-templates" style="display:none;">
+      <div class="page-head">
+        <h1>Skabeloner</h1>
+        <p>Gem en opsætning (titel, besked, link, baggrund) og genbrug den med ét klik.</p>
+      </div>
+      <div class="card">
+        <div id="templateRows"></div>
+        <div class="empty" id="templateEmpty" style="display:none;">
+          Ingen skabeloner endnu. Sæt en session op under "Live session", og gem den herfra.
+        </div>
+      </div>
+    </section>
+
+    <section id="view-schedule" style="display:none;">
+      <div class="page-head">
+        <h1>Planlægning</h1>
+        <p>Lad skærmen automatisk gå live og offline på et fast tidsrum.</p>
+      </div>
+      <div class="card">
+        <div class="status-row">
+          <span class="dot" id="scheduleDot"></span>
+          <span class="status-text" id="scheduleStatusText">Planlægning slået fra</span>
+          <button class="toggle" id="scheduleToggle">Slå til</button>
+        </div>
+        <label for="scheduleStart">Går live</label>
+        <input type="datetime-local" id="scheduleStart">
+        <label for="scheduleEnd">Går offline</label>
+        <input type="datetime-local" id="scheduleEnd">
+        <p class="helper">Når planlægning er slået til, styrer tidsrummet automatisk om skærmen er live — den manuelle knap under "Live session" bliver overstyret, mens planen er aktiv.</p>
+        <div class="actions">
+          <button class="primary" id="saveScheduleBtn">Gem planlægning</button>
+          <span class="save-msg" id="scheduleSaveMsg">Gemt ✓</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-stats" style="display:none;">
+      <div class="page-head">
+        <h1>Statistik</h1>
+        <p>Rigtige scanninger — talt når nogen scanner QR-koden og sendes videre til jeres link.</p>
+      </div>
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Scanninger i alt</label>
+            <input type="text" id="statTotal" readonly>
+          </div>
+          <div>
+            <label>Seneste 24 timer</label>
+            <input type="text" id="statToday" readonly>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Seneste scanninger</h2>
+        <table>
+          <thead><tr><th>Tidspunkt</th><th>Session</th></tr></thead>
+          <tbody id="statRows"></tbody>
+        </table>
+        <div class="empty" id="statEmpty" style="display:none;">
+          Ingen scanninger endnu.
         </div>
       </div>
     </section>
