@@ -5,7 +5,22 @@ const bgOptions = [
   {id:'gold', css:'linear-gradient(135deg,#F1DFB8,#DDBE7C)'}
 ];
 
+let lastSignature = null;
+let lastUpdateAt = null;
+let socketConnected = false;
+
+function signatureOf(state){
+  return JSON.stringify([state.live, state.target, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody]);
+}
+
 function render(state){
+  const signature = signatureOf(state);
+  lastUpdateAt = Date.now();
+  updateSyncStatus();
+
+  if(signature === lastSignature) return;
+  lastSignature = signature;
+
   const screen = document.getElementById('screen');
   const bgDef = bgOptions.find(b=>b.id===state.bg) || bgOptions[0];
   screen.style.backgroundImage = bgDef.css;
@@ -15,6 +30,9 @@ function render(state){
   const offlineMsg = document.getElementById('offlineMsg');
   const title = document.getElementById('title');
   const msg = document.getElementById('msg');
+  const liveBadge = document.getElementById('liveBadge');
+
+  liveBadge.classList.toggle('show', !!state.live);
 
   if(state.live){
     qrBox.style.display = 'inline-block';
@@ -40,8 +58,36 @@ function render(state){
   }
 }
 
-// initial load via REST, then live updates via socket
-fetch('/api/public-state').then(r => r.json()).then(render);
+function updateSyncStatus(){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  if(!lastUpdateAt){
+    el.textContent = 'Forbinder…';
+    return;
+  }
+  const secs = Math.max(0, Math.round((Date.now() - lastUpdateAt) / 1000));
+  const connLabel = socketConnected ? 'Live-forbindelse' : 'Synkroniserer';
+  el.textContent = secs <= 1
+    ? `${connLabel} · opdateret lige nu`
+    : `${connLabel} · opdateret for ${secs}s siden`;
+}
+
+async function poll(){
+  try{
+    const res = await fetch('/api/public-state', { cache: 'no-store' });
+    const state = await res.json();
+    render(state);
+  }catch(e){
+    // silent — next poll or socket push will recover
+  }
+}
+
+poll();
 
 const socket = io();
+socket.on('connect', () => { socketConnected = true; updateSyncStatus(); });
+socket.on('disconnect', () => { socketConnected = false; updateSyncStatus(); });
 socket.on('state-update', render);
+
+setInterval(poll, 1000);
+setInterval(updateSyncStatus, 1000);

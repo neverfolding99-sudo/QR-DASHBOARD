@@ -12,14 +12,22 @@
 <div class="display-wrap">
   <div class="screen display-screen" id="screen">
     <div class="screen-overlay"></div>
+    <div class="live-badge" id="liveBadge"><span class="live-dot"></span>LIVE</div>
     <div class="eyebrow">regningoutbounn.dk</div>
     <h3 id="title">Ingen aktiv session</h3>
-    <div class="qr-box" id="qrBox" style="display:none;"><div id="qrcode"></div></div>
+    <div class="qr-frame" id="qrBox" style="display:none;">
+      <span class="corner corner-tl"></span>
+      <span class="corner corner-tr"></span>
+      <span class="corner corner-bl"></span>
+      <span class="corner corner-br"></span>
+      <div class="qr-box"><div id="qrcode"></div></div>
+    </div>
     <div class="offline-msg" id="offlineMsg" style="display:none;">
       <strong id="offlineTitle">Ingen aktiv session</strong>
       <span id="offlineBody">Kom tilbage senere</span>
     </div>
     <div class="footline" id="msg"></div>
+    <div class="sync-status" id="syncStatus">Forbinder…</div>
   </div>
 </div>
 
