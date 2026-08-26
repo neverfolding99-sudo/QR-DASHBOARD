@@ -144,15 +144,6 @@ function render(){
   document.getElementById('offlineBody').value = state.offlineBody || '';
 }
 
-function renderQR(){
-  const el = document.getElementById('qrcode');
-  el.innerHTML = '';
-  const url = state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk';
-  new QRCode(el, {
-    text: url, width: 180, height: 180,
-    colorDark: '#132E28', colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
-  });
 let adminQrInstance = null;
   function renderQR(){
         const el = document.getElementById('qrcode');
