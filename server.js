@@ -57,12 +57,30 @@ function saveState(state) {
 let state = loadState();
 
 app.use(express.json());
-app.use('/display', express.static(path.join(__dirname, 'public'), { index: 'display.html' }));
+
+// --- No-cache guard for the public display: this is what a kiosk screen sits
+// on for hours/days. Without this, browsers and Render's CDN can serve a
+// stale display.html/display.js/styles.css, which looks exactly like "the
+// screen doesn't update when a customer scans" even though the server side
+// is working correctly. ---
+app.use('/display', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+app.get(['/display.js', '/styles.css'], (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  next();
+});
+
+app.use('/display', express.static(path.join(__dirname, 'public'), { index: 'display.html', etag: false, lastModified: false }));
 app.use('/admin', express.static(path.join(__dirname, 'public'), { index: 'admin.html' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false }));
 
 // --- Public: read-only state for the display screen (no auth, no secrets in payload) ---
 app.get('/api/public-state', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json(publicPayload());
 });
 
