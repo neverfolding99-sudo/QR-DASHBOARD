@@ -84,7 +84,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    ['session','templates','schedule','stats','customers','settings'].forEach(v=>{
+    ['session','templates','schedule','stats','customers','settings','capture'].forEach(v=>{
       document.getElementById('view-'+v).style.display = (v===btn.dataset.view) ? 'block':'none';
     });
     if(btn.dataset.view === 'stats') loadStats();
@@ -395,3 +395,137 @@ async function loadStats(){
     rows.appendChild(tr);
   });
 }
+
+
+let captureStream = null;
+let captureScanning = false;
+let captureRafId = null;
+let capturePushEnabled = false;
+let captureLastPushed = null;
+let captureLastPushAt = 0;
+const captureCanvas = document.createElement('canvas');
+const captureCtx = captureCanvas.getContext('2d', { willReadFrequently: true });
+
+document.getElementById('captureStartBtn').addEventListener('click', startScreenShare);
+document.getElementById('captureStopBtn').addEventListener('click', stopScreenShare);
+document.getElementById('capturePushToggle').addEventListener('click', toggleCapturePush);
+
+async function startScreenShare(){
+    clearCaptureErr();
+    const video = document.getElementById('screenVideo');
+    try {
+          captureStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
+    } catch(e) {
+          showCaptureErr('Kunne ikke starte skaermdeling. Vaelg det vindue hvor QR-koden vises, og proev igen.');
+          return;
+    }
+    video.srcObject = captureStream;
+    await video.play();
+    captureStream.getVideoTracks()[0].addEventListener('ended', stopScreenShare);
+
+  document.getElementById('screenPlaceholder').style.display = 'none';
+    document.getElementById('captureStartBtn').style.display = 'none';
+    document.getElementById('captureStopBtn').style.display = 'inline-block';
+    setCaptureStatus(true, 'Soeger efter QR-kode...');
+
+  captureScanning = true;
+    captureScanLoop();
+}
+
+function stopScreenShare(){
+    captureScanning = false;
+    if(captureRafId) cancelAnimationFrame(captureRafId);
+    if(captureStream) captureStream.getTracks().forEach(t=>t.stop());
+    captureStream = null;
+    const video = document.getElementById('screenVideo');
+    if(video) video.srcObject = null;
+    const ph = document.getElementById('screenPlaceholder');
+    if(ph) ph.style.display = 'flex';
+    const startBtn = document.getElementById('captureStartBtn');
+    const stopBtn = document.getElementById('captureStopBtn');
+    if(startBtn) startBtn.style.display = 'inline-block';
+    if(stopBtn) stopBtn.style.display = 'none';
+    setCaptureStatus(false, 'Skaermdeling stoppet');
+}
+
+function captureScanLoop(){
+    if(!captureScanning) return;
+    const video = document.getElementById('screenVideo');
+    if(video && video.readyState === video.HAVE_ENOUGH_DATA){
+          const w = video.videoWidth, h = video.videoHeight;
+          if(w && h){
+                  captureCanvas.width = w;
+                  captureCanvas.height = h;
+                  captureCtx.drawImage(video, 0, 0, w, h);
+                  const img = captureCtx.getImageData(0, 0, w, h);
+                  const code = window.jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' });
+                  if(code && code.data){
+                            onCaptureDecoded(code.data);
+                  }
+          }
+    }
+    captureRafId = requestAnimationFrame(captureScanLoop);
+}
+
+function onCaptureDecoded(value){
+    const readEl = document.getElementById('captureReadValue');
+    if(readEl) readEl.value = value;
+    setCaptureStatus(true, 'Kode aflaest');
+    if(!capturePushEnabled) return;
+    const now = Date.now();
+    if(value === captureLastPushed && now - captureLastPushAt < 1500) return;
+    captureLastPushed = value;
+    captureLastPushAt = now;
+    pushCaptureToDisplay(value);
+}
+
+async function pushCaptureToDisplay(value){
+    try{
+          const res = await fetch('/api/capture-push', {
+                  method:'POST',
+                  headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
+                  body: JSON.stringify({ target: value })
+          });
+          if(res.ok){
+                  state = await apiGet('/api/state');
+                  render();
+          } else {
+                  showCaptureErr('Kunne ikke sende til skaermen. Er du stadig logget ind?');
+          }
+    }catch(e){
+          showCaptureErr('Netvaerksfejl ved afsendelse til skaermen.');
+    }
+}
+
+function toggleCapturePush(){
+    capturePushEnabled = !capturePushEnabled;
+    const toggleBtn = document.getElementById('capturePushToggle');
+    const statusEl = document.getElementById('capturePushStatus');
+    if(toggleBtn) toggleBtn.textContent = 'Send til kundeskaerm: ' + (capturePushEnabled ? 'til' : 'fra');
+    if(statusEl) statusEl.textContent = capturePushEnabled
+      ? 'Sender aflaest kode live til kundeskaerm'
+          : 'Sender ikke til kundeskaerm';
+    if(capturePushEnabled && captureLastPushed === null){
+          const cur = document.getElementById('captureReadValue').value;
+          if(cur && cur !== '-'){ captureLastPushed = cur; captureLastPushAt = Date.now(); pushCaptureToDisplay(cur); }
+    }
+}
+
+function setCaptureStatus(active, text){
+    const dot = document.getElementById('captureDot');
+    const textEl = document.getElementById('captureStatusText');
+    if(!dot) return;
+    dot.classList.toggle('live', !!active);
+    if(textEl) textEl.textContent = text;
+}
+
+function showCaptureErr(msg){
+    const el = document.getElementById('captureErr');
+    if(el) el.textContent = msg;
+}
+function clearCaptureErr(){
+    const el = document.getElementById('captureErr');
+    if(el) el.textContent = '';
+}
+
+window.addEventListener('pagehide', stopScreenShare);
