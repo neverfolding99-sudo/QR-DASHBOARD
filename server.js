@@ -4,6 +4,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const { Jimp } = require('jimp');
+const jsQR = require('jsqr');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,7 +29,8 @@ function defaultState() {
     customers: [],
     templates: [],
     stats: { totalScans: 0, scanLog: [] },
-    schedule: { enabled: false, start: null, end: null }
+    schedule: { enabled: false, start: null, end: null },
+          capture: { sourceUrl: '', enabled: false, lastCheckedAt: null, lastError: null }
   };
 }
 
@@ -42,7 +45,7 @@ function loadState() {
   try {
     const loaded = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     // merge with defaults so upgrades from older data.json don't crash on missing fields
-    return { ...defaultState(), ...loaded, stats: { ...defaultState().stats, ...(loaded.stats || {}) }, schedule: { ...defaultState().schedule, ...(loaded.schedule || {}) } };
+    return { ...defaultState(), ...loaded, stats: { ...defaultState().stats, ...(loaded.stats || {}) }, schedule: { ...defaultState().schedule, ...(loaded.schedule || {}) }, capture: { ...defaultState().capture, ...(loaded.capture || {}) } };
   } catch (e) {
     const fresh = defaultState();
     saveState(fresh);
@@ -120,24 +123,111 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-app.post('/api/capture', requireAdmin, (req, res) => {
-    const { target } = req.body;
-    if (!target || typeof target !== 'string' || !target.trim()) {
-          return res.status(400).json({ error: 'Tom kode' });
+async function resolveQrImageBuffer(url) {
+    const r = await fetch(url, { redirect: 'follow' });
+    if (!r.ok) throw new Error(`Kunne ikke hente siden (HTTP ${r.status})`);
+    const ct = r.headers.get('content-type') || '';
+    if (ct.startsWith('image/')) {
+          return Buffer.from(await r.arrayBuffer());
     }
-    const clean = target.trim();
-    if (state.target !== clean || !state.live) {
-          state.target = clean;
-          state.live = true;
-          state.lastUpdated = Date.now();
+    const html = await r.text();
+    const imgMatches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)];
+    if (!imgMatches.length) throw new Error('Ingen billeder fundet paa siden');
+    const qrCandidate = imgMatches.find(m => /qr/i.test(m[0]));
+    const candidate = qrCandidate || imgMatches[0];
+    let imgSrc = candidate[1];
+    if (imgSrc.startsWith('//')) {
+          imgSrc = 'https:' + imgSrc;
+    } else if (!/^https?:\/\//i.test(imgSrc)) {
+          imgSrc = new URL(imgSrc, url).toString();
+    }
+    const r2 = await fetch(imgSrc, { redirect: 'follow' });
+    if (!r2.ok) throw new Error(`Kunne ikke hente billedet (HTTP ${r2.status})`);
+    return Buffer.from(await r2.arrayBuffer());
+}
+
+async function decodeQrFromBuffer(buffer) {
+    const image = await Jimp.read(buffer);
+    const { data, width, height } = image.bitmap;
+    const code = jsQR(new Uint8ClampedArray(data), width, height);
+    return code ? code.data : null;
+}
+
+app.post('/api/capture-url', requireAdmin, async (req, res) => {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string' || !url.trim()) {
+          return res.status(400).json({ error: 'Ingen URL angivet' });
+    }
+    const cleanUrl = url.trim();
+    try {
+          const buffer = await resolveQrImageBuffer(cleanUrl);
+          const decoded = await decodeQrFromBuffer(buffer);
+          state.capture.lastCheckedAt = Date.now();
+          if (!decoded) {
+                  state.capture.lastError = 'Kunne ikke finde eller aflaese en QR-kode paa siden';
+                  saveState(state);
+                  return res.status(422).json({ error: state.capture.lastError });
+          }
+          state.capture.lastError = null;
+          if (state.target !== decoded || !state.live) {
+                  state.target = decoded;
+                  state.live = true;
+                  state.lastUpdated = Date.now();
+                  io.emit('state-update', publicPayload());
+          }
           saveState(state);
-          io.emit('state-update', publicPayload());
           io.emit('admin-state-update', state);
+          res.json({ ok: true, target: decoded });
+    } catch (e) {
+          state.capture.lastError = e.message || 'Ukendt fejl';
+          state.capture.lastCheckedAt = Date.now();
+          saveState(state);
+          io.emit('admin-state-update', state);
+          res.status(500).json({ error: state.capture.lastError });
     }
-    res.json({ ok: true, target: clean, live: state.live });
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/capture-settings', requireAdmin, (req, res) => {
+    const { sourceUrl, enabled } = req.body;
+    if (sourceUrl !== undefined) state.capture.sourceUrl = String(sourceUrl).trim();
+    if (enabled !== undefined) state.capture.enabled = !!enabled;
+    saveState(state);
+    io.emit('admin-state-update', state);
+    res.json(state.capture);
+});
+
+setInterval(async () => {
+    if (!state.capture || !state.capture.enabled || !state.capture.sourceUrl) return;
+    try {
+          const buffer = await resolveQrImageBuffer(state.capture.sourceUrl);
+          const decoded = await decodeQrFromBuffer(buffer);
+          state.capture.lastCheckedAt = Date.now();
+          if (!decoded) {
+                  state.capture.lastError = 'Kunne ikke finde eller aflaese en QR-kode paa siden';
+                  saveState(state);
+                  io.emit('admin-state-update', state);
+                  return;
+          }
+          state.capture.lastError = null;
+          if (state.target !== decoded || !state.live) {
+                  state.target = decoded;
+                  state.live = true;
+                  state.lastUpdated = Date.now();
+                  saveState(state);
+                  io.emit('state-update', publicPayload());
+                  io.emit('admin-state-update', state);
+          } else {
+                  saveState(state);
+          }
+    } catch (e) {
+          state.capture.lastError = e.message || 'Ukendt fejl';
+          state.capture.lastCheckedAt = Date.now();
+          saveState(state);
+          io.emit('admin-state-update', state);
+    }
+}, 20000);
+
+p.post('/api/login', (req, res) => {
   const { password } = req.body;
   if (password === ADMIN_PASSWORD) {
     return res.json({ ok: true });
