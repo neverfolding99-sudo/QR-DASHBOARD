@@ -75,6 +75,11 @@ app.get(['/display.js', '/styles.css'], (req, res, next) => {
 });
 
 app.use('/display', express.static(path.join(__dirname, 'public'), { index: 'display.html', etag: false, lastModified: false }));
+app.get(['/capture', '/capture.js'], (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    next();
+});
+app.use('/capture', express.static(path.join(__dirname, 'public'), { index: 'capture.html', etag: false, lastModified: false }));
 app.use('/admin', express.static(path.join(__dirname, 'public'), { index: 'admin.html' }));
 app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false }));
 
@@ -114,6 +119,23 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+app.post('/api/capture', requireAdmin, (req, res) => {
+    const { target } = req.body;
+    if (!target || typeof target !== 'string' || !target.trim()) {
+          return res.status(400).json({ error: 'Tom kode' });
+    }
+    const clean = target.trim();
+    if (state.target !== clean || !state.live) {
+          state.target = clean;
+          state.live = true;
+          state.lastUpdated = Date.now();
+          saveState(state);
+          io.emit('state-update', publicPayload());
+          io.emit('admin-state-update', state);
+    }
+    res.json({ ok: true, target: clean, live: state.live });
+});
 
 app.post('/api/login', (req, res) => {
   const { password } = req.body;
