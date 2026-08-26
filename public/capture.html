@@ -1,75 +1,88 @@
 <!DOCTYPE html>
-  <html lang="da">
-  <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Capture QR</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <style>
-    .cap-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--forest-deep);padding:4vh 4vw;}
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capture QR</title>
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  .cap-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--forest-deep);padding:4vh 4vw;}
   .cap-card{background:var(--paper);border-radius:22px;width:100%;max-width:440px;padding:26px;box-shadow:0 30px 80px -20px rgba(0,0,0,0.5);}
   .cap-card h1{font-family:'Fraunces',serif;font-size:22px;margin:0 0 4px;color:var(--forest-deep);}
   .cap-card .sub{font-size:13px;color:var(--ink-soft);margin:0 0 18px;}
   .cam-frame{position:relative;width:100%;aspect-ratio:1;background:#0d1b18;border-radius:16px;overflow:hidden;margin-bottom:16px;}
-  #cam{width:100%;height:100%;object-fit:cover;display:block;}
-
-  .cam-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;}
-  .cam-reticle{width:62%;aspect-ratio:1;border-radius:16px;box-shadow:0 0 0 3px rgba(127,217,182,0.9), 0 0 0 100vmax rgba(13,27,24,0.45);}
+  #screenVideo{width:100%;height:100%;object-fit:contain;display:block;background:#0d1b18;}
   .cam-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(220,242,232,0.7);font-size:13px;text-align:center;padding:20px;gap:6px;}
   .read-status{display:flex;align-items:center;gap:9px;margin-bottom:16px;font-size:13.5px;}
   .read-dot{width:9px;height:9px;border-radius:50%;background:#C7CDC8;flex-shrink:0;}
-    .read-dot.reading{background:#3FB479;}
+  .read-dot.reading{background:#3FB479;}
+  .read-dot.stopped{background:#C7CDC8;}
   .read-value{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--forest);word-break:break-all;background:#F5F2EA;border-radius:8px;padding:8px 10px;margin-bottom:16px;min-height:18px;}
-    .cap-actions{display:flex;gap:10px;flex-wrap:wrap;}
-        .live-flag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);margin-top:14px;}
+  .cap-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .live-flag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);margin-top:14px;}
   .live-flag .dot{width:8px;height:8px;border-radius:50%;background:#C7CDC8;}
-    .live-flag .dot.on{background:#3FB479;}
+  .live-flag .dot.on{background:#3FB479;}
   .cap-note{font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin-top:16px;border-top:1px solid var(--line);padding-top:14px;}
-            .cap-err{color:#B4453A;font-size:13px;margin-top:10px;display:none;}
-                .cap-err.show{display:block;}
+  .cap-err{color:#B4453A;font-size:13px;margin-top:10px;display:none;}
+  .cap-err.show{display:block;}
   .back-link{display:inline-block;margin-top:16px;font-size:12.5px;color:var(--forest);text-decoration:none;}
-          </style>
-            </head>
-            <body>
-
-            <div class="login-wrap" id="loginWrap" style="display:flex;">
-              <div class="login-card">
-      <h1>Capture QR</h1>
-                <p>Log ind for at aflaese en live QR-kode.</p>
-                <label for="loginPassword">Adgangskode</label>
+</style>
+</head>
+<body>
+<div class="login-wrap" id="loginWrap" style="display:flex;">
+  <div class="login-card">
+    <h1>Capture QR</h1>
+    <p>Log ind for at dele din skaerm og laese en live QR-kode.</p>
+    <label for="loginPassword">Adgangskode</label>
     <input type="password" id="loginPassword" placeholder="Adgangskode">
-                <div class="login-error" id="loginError">Forkert adgangskode.</div>
-                <button class="primary" id="loginBtn">Log ind</button>
-              </div>
-</div>
-<div class="cap-wrap" id="capApp" style="display:none;">
-              <div class="cap-card">
-        <h1>Aflaes live QR-kode</h1>
-        <p class="sub">Hold en QR-kode foran kameraet.</p>
-    <div class="cam-frame">
-                  <video id="cam" playsinline muted></video>
-                  <div class="cam-overlay"><div class="cam-reticle" id="reticle" style="display:none;"></div></div>
-      <div class="cam-placeholder" id="camPlaceholder"><span>Kameraet er ikke startet</span></div>
-                </div>
-
-                <div class="read-status"><span class="read-dot" id="readDot"></span><span id="readText">Kamera stoppet</span></div>
-                <label>Sidst aflaeste kode</label>
-                <div class="read-value" id="readValue">-</div>
-    <div class="cap-actions">
-                  <button class="primary" id="startBtn">Start kamera</button>
-          <button class="ghost" id="stopBtn" style="display:none;">Stop</button>
-      <button class="ghost" id="pushToggle">Send til skaerm: fra</button>
-                </div>
-                <div class="live-flag"><span class="dot" id="liveFlag"></span><span id="liveFlagText">Sender ikke til kundeskaerm</span></div>
-                <div class="cap-err" id="capErr"></div>
-                <div class="cap-note">Faste koder virker fuldt ud. Skiftende koder kan udloebe foer scanning.</div>
-                <a class="back-link" href="/admin">Tilbage til admin</a>
+    <div class="login-error" id="loginError">Forkert adgangskode.</div>
+    <button class="primary" id="loginBtn">Log ind</button>
   </div>
 </div>
+
+<div class="cap-wrap" id="capApp" style="display:none;">
+  <div class="cap-card">
+    <h1>Del skaerm og aflaes QR</h1>
+    <p class="sub">Del det vindue, den fane eller den skaerm hvor QR-koden vises. Panelet aflaeser den loebende og sender den live til kundeskaermen.</p>
+
+    <div class="cam-frame">
+      <video id="screenVideo" playsinline muted></video>
+      <div class="cam-placeholder" id="screenPlaceholder">
+        <span>Ingen skaerm delt endnu</span>
+        <span style="opacity:.7;">Tryk "Del skaerm" nedenfor</span>
+      </div>
+    </div>
+
+    <div class="read-status">
+      <span class="read-dot stopped" id="readDot"></span>
+      <span id="readText">Skaermdeling stoppet</span>
+    </div>
+
+    <label>Sidst aflaeste kode</label>
+    <div class="read-value" id="readValue">-</div>
+
+    <div class="cap-actions">
+      <button class="primary" id="startBtn">Del skaerm</button>
+      <button class="ghost" id="stopBtn" style="display:none;">Stop</button>
+      <button class="ghost" id="pushToggle">Send til kundeskaerm: fra</button>
+    </div>
+
+    <div class="live-flag"><span class="dot" id="liveFlag"></span><span id="liveFlagText">Sender ikke til kundeskaerm</span></div>
+
+    <div class="cap-err" id="capErr"></div>
+
+    <div class="cap-note">
+      Vaelg det vindue eller den fane hvor QR-koden vises (fx en betalingsside), naar browseren spoerger. Skaermen aflaeses loebende, saa aendrer kilden sig, opdaterer kundeskaermen automatisk.
+    </div>
+
+    <a class="back-link" href="/admin">Tilbage til admin</a>
+  </div>
+</div>
+
 <canvas id="work" style="display:none;"></canvas>
+
 <script src="/socket.io/socket.io.js"></script>
-            <script src="/capture.js"></script>
-            </body>
-            </html>
-            
+<script src="/capture.js"></script>
+</body>
+</html>
