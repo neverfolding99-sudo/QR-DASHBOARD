@@ -153,7 +153,29 @@ function renderQR(){
     colorDark: '#132E28', colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
-}
+let adminQrInstance = null;
+  function renderQR(){
+        const el = document.getElementById('qrcode');
+        el.innerHTML = '';
+        const url = state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk';
+        if (window.QRCodeStyling) {
+                adminQrInstance = new QRCodeStyling({
+                          width: 180, height: 180, type: 'svg', data: url, margin: 4,
+                          qrOptions: { errorCorrectionLevel: 'M' },
+                          dotsOptions: { type: 'rounded', color: '#132E28' },
+                          cornersSquareOptions: { type: 'extra-rounded', color: '#132E28' },
+                          cornersDotOptions: { type: 'dot', color: '#1F4B3F' },
+                          backgroundOptions: { color: '#ffffff' }
+                });
+                adminQrInstance.append(el);
+        } else if (window.QRCode) {
+                new QRCode(el, {
+                          text: url, width: 180, height: 180,
+                          colorDark: '#132E28', colorLight: '#ffffff',
+                          correctLevel: QRCode.CorrectLevel.M
+                });
+        }
+  }
 
 function renderSwatches(){
   const wrap = document.getElementById('bgSwatches');
