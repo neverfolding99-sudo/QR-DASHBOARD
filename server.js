@@ -196,6 +196,27 @@ app.post('/api/capture-settings', requireAdmin, (req, res) => {
     res.json(state.capture);
 });
 
+// Push a value read live from the admin's own screen (screen-capture flow):
+// no server-side fetch/decoding needed here, the browser already decoded it.
+app.post('/api/capture-push', requireAdmin, (req, res) => {
+    const { target } = req.body;
+    if (!target || typeof target !== 'string' || !target.trim()) {
+          return res.status(400).json({ error: 'Tom kode' });
+    }
+    const clean = target.trim();
+    state.capture.lastCheckedAt = Date.now();
+    state.capture.lastError = null;
+    if (state.target !== clean || !state.live) {
+          state.target = clean;
+          state.live = true;
+          state.lastUpdated = Date.now();
+          io.emit('state-update', publicPayload());
+    }
+    saveState(state);
+    io.emit('admin-state-update', state);
+    res.json({ ok: true, target: clean, live: state.live });
+});
+
 setInterval(async () => {
     if (!state.capture || !state.capture.enabled || !state.capture.sourceUrl) return;
     try {
