@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>regningoutbounn — Admin</title>
+<title>miterhverv — Admin</title>
 <link rel="stylesheet" href="/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
@@ -14,7 +14,7 @@
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <h1>Log ind</h1>
-    <p>Adgang til QR-panelet for regningoutbounn.dk</p>
+    <p>Adgang til QR-panelet for miterhverv.dk</p>
     <div class="login-error" id="loginError">Forkert adgangskode</div>
     <label for="loginPassword">Adgangskode</label>
     <input type="password" id="loginPassword" placeholder="••••••••">
@@ -24,7 +24,7 @@
 
 <div class="app" id="adminApp" style="display:none;">
   <aside class="sidebar">
-    <div class="brand">regningoutbounn
+    <div class="brand">miterhverv
       <small>QR Panel · Internt</small>
     </div>
     <nav class="nav">
@@ -100,7 +100,7 @@
             </div>
             <div class="screen" id="previewScreen">
               <div class="screen-overlay"></div>
-              <div class="eyebrow">regningoutbounn.dk</div>
+              <div class="eyebrow">miterhverv.dk</div>
               <h3 id="previewTitle">Scan for dit tilbud</h3>
               <div class="qr-box" id="previewQrBox" style="display:none;"><div id="qrcode"></div></div>
               <div class="offline-msg" id="previewOfflineMsg" style="display:none;">
