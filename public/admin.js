@@ -637,7 +637,7 @@ async function rotateToggleClick(){
 }
 async function rotateSaveClick(){
   var n=parseInt(document.getElementById("rotateInterval").value,10);
-  if(!Number.isFinite(n)||n<3)return;
+  if(!Number.isFinite(n)||n<1)return;
   state.rotate=await apiPost("/api/rotate-settings",{enabled:(state.rotate||{}).enabled,intervalSeconds:n});
   renderRotateUI();flashSave("rotateSaveMsg");
 }
