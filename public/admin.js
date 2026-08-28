@@ -529,3 +529,92 @@ function clearCaptureErr(){
 }
 
 window.addEventListener('pagehide', stopScreenShare);
+
+
+                                                                      document.getElementById('captureFetchNowBtn').addEventListener('click', captureFetchNow);
+document.getElementById('captureSaveUrlBtn').addEventListener('click', captureSaveUrl);
+document.getElementById('captureAutoToggle').addEventListener('click', captureToggleAuto);
+
+async function captureFetchNow(){
+    const url = document.getElementById('captureSourceUrl').value.trim();
+    if(!url){ showCaptureUrlErr('Indsaet en URL foerst.'); return; }
+    clearCaptureUrlErr();
+    const btn = document.getElementById('captureFetchNowBtn');
+    const original = btn.textContent;
+    btn.textContent = 'Henter...';
+    btn.disabled = true;
+    try{
+          const res = await fetch('/api/capture-url', {
+                  method:'POST',
+                  headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
+                  body: JSON.stringify({ url })
+          });
+          const data = await res.json();
+          if(!res.ok){
+                  showCaptureUrlErr(data.error || 'Kunne ikke hente QR-koden.');
+          } else {
+                  state = await apiGet('/api/state');
+                  render();
+          }
+    }catch(e){
+          showCaptureUrlErr('Netvaerksfejl ved hentning.');
+    }finally{
+          btn.textContent = original;
+          btn.disabled = false;
+    }
+}
+
+
+async function captureSaveUrl(){
+    const url = document.getElementById('captureSourceUrl').value.trim();
+    await apiPost('/api/capture-settings', { sourceUrl: url });
+    state = await apiGet('/api/state');
+    render();
+}
+
+async function captureToggleAuto(){
+    const url = document.getElementById('captureSourceUrl').value.trim();
+    if(!url){ showCaptureUrlErr('Indsaet og gem en URL, foer du slaar automatisk opdatering til.'); return; }
+    const toggleBtn = document.getElementById('captureAutoToggle');
+    const turningOn = toggleBtn.textContent.trim() === 'Slaa til';
+    await apiPost('/api/capture-settings', { sourceUrl: url, enabled: turningOn });
+    state = await apiGet('/api/state');
+    render();
+}
+
+function renderCaptureUrlState(){
+    if(!state || !state.capture) return;
+    const c = state.capture;
+    const urlEl = document.getElementById('captureSourceUrl');
+    if(document.activeElement !== urlEl) urlEl.value = c.sourceUrl || '';
+
+  const toggleBtn = document.getElementById('captureAutoToggle');
+    if(toggleBtn){
+          toggleBtn.textContent = c.enabled ? 'Slaa fra' : 'Slaa til';
+          toggleBtn.classList.toggle('is-live', !!c.enabled);
+    }
+
+  const statusEl = document.getElementById('captureUrlStatus');
+    if(statusEl){
+          statusEl.value = c.lastError ? c.lastError : (c.lastCheckedAt ? 'Hentet korrekt' : 'Ikke hentet endnu');
+    }
+    const checkedEl = document.getElementById('captureUrlChecked');
+    if(checkedEl){
+          checkedEl.value = c.lastCheckedAt ? fmtTime(c.lastCheckedAt) : '-';
+    }
+}
+
+function showCaptureUrlErr(msg){
+    const el = document.getElementById('captureUrlErr');
+    if(el) el.textContent = msg;
+}
+function clearCaptureUrlErr(){
+    const el = document.getElementById('captureUrlErr');
+    if(el) el.textContent = '';
+}
+
+const _originalRenderForCapture = render;
+render = function(){
+    _originalRenderForCapture();
+    renderCaptureUrlState();
+};
