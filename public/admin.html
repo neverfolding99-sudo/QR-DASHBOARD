@@ -228,10 +228,39 @@
 
     <section id="view-capture" style="display:none;">
       <div class="page-head">
-        <h1>Capture QR fra skærm</h1>
-        <p>Del et vindue eller en skærm hvor en QR-kode vises. Panelet aflæser den løbende og sender den live til kundeskærmen.</p>
+        <h1>Capture QR</h1>
+        <p>Hent en QR-kode fra en side I selv kontrollerer, så I slipper for at skrive linket ind manuelt.</p>
       </div>
+
       <div class="card">
+        <h2>Hent fra jeres egen side</h2>
+        <p class="sub">Indsæt adressen på en side eller et billede med en QR-kode I selv ejer. Panelet henter og aflæser den automatisk.</p>
+        <label for="captureSourceUrl">Side- eller billed-URL</label>
+        <input type="text" id="captureSourceUrl" placeholder="https://jeres-side.dk/side-med-qr">
+        <div class="actions">
+          <button class="primary" id="captureFetchNowBtn">Hent nu</button>
+          <button class="ghost" id="captureSaveUrlBtn">Gem adresse</button>
+        </div>
+        <div class="status-row" style="margin-top:14px;">
+          <span>Hold automatisk opdateret (hvert 20. sek.)</span>
+          <button class="toggle" id="captureAutoToggle">Slå til</button>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <div>
+            <label>Status</label>
+            <input type="text" id="captureUrlStatus" readonly>
+          </div>
+          <div>
+            <label>Sidst tjekket</label>
+            <input type="text" id="captureUrlChecked" readonly>
+          </div>
+        </div>
+        <div class="save-msg" id="captureUrlErr" style="color:#B4453A;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Eller: del en skærm</h2>
+        <p class="sub">Alternativ til ovenstående — del et vindue eller en skærm hvor en QR-kode vises (fx jeres eget kasseapparat). Bruges kun til QR-koder I selv har fuld kontrol over.</p>
         <div class="status-row">
           <span class="dot" id="captureDot"></span>
           <span class="status-text" id="captureStatusText">Skærmdeling stoppet</span>
@@ -251,10 +280,6 @@
         </div>
         <p class="helper" id="capturePushStatus">Sender ikke til kundeskærm</p>
         <div class="save-msg" id="captureErr" style="color:#B4453A;"></div>
-      </div>
-      <div class="card">
-        <h2>Sådan virker det</h2>
-        <p class="sub">Vælg det vindue eller den fane hvor QR-koden vises (fx en betalingsside), når browseren spørger. Skærmen aflæses løbende, så ændrer kilden sig, opdaterer kundeskærmen automatisk.</p>
       </div>
     </section>
   </main>
