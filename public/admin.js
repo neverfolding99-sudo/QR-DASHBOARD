@@ -618,3 +618,43 @@ render = function(){
     _originalRenderForCapture();
     renderCaptureUrlState();
 };
+
+function injectRotateUI(){
+  if(document.getElementById("rotateToggle")) return;
+  var a=document.querySelector("#view-session .grid > div");
+  if(!a) return;
+  var c=document.createElement("div");
+  c.className="card";
+  c.innerHTML=["<h2>Automatisk rotation<\/h2>","<p class=\"sub\">Skift QR til ny session automatisk hvert X sekunder.<\/p>","<div class=\"status-row\"><span class=\"dot\" id=\"rotateDot\"><\/span><span class=\"status-text\" id=\"rotateStatusText\">Slaaet fra<\/span><button class=\"toggle\" id=\"rotateToggle\">Slaa til<\/button><\/div>","<label>Sekunder<\/label><input type=\"number\" id=\"rotateInterval\" min=\"3\" step=\"1\" placeholder=\"15\">","<div class=\"actions\"><button class=\"primary\" id=\"saveRotateBtn\">Gem<\/button><span class=\"save-msg\" id=\"rotateSaveMsg\">Gemt<\/span><\/div>"].join("");
+  a.appendChild(c);
+}
+async function rotateToggleClick(){
+  var r=state.rotate||{enabled:false,intervalSeconds:15};
+  var n=parseInt(document.getElementById("rotateInterval").value,10);
+  var s=(Number.isFinite(n)&&n>=3)?n:(r.intervalSeconds||15);
+  state.rotate=await apiPost("/api/rotate-settings",{enabled:!r.enabled,intervalSeconds:s});
+  renderRotateUI();
+}
+async function rotateSaveClick(){
+  var n=parseInt(document.getElementById("rotateInterval").value,10);
+  if(!Number.isFinite(n)||n<3)return;
+  state.rotate=await apiPost("/api/rotate-settings",{enabled:(state.rotate||{}).enabled,intervalSeconds:n});
+  renderRotateUI();flashSave("rotateSaveMsg");
+}
+function renderRotateUI(){
+  if(!state||!state.rotate)return;
+  var r=state.rotate,d=document.getElementById("rotateDot");
+  if(!d)return;
+  d.classList.toggle("live",!!r.enabled);
+  document.getElementById("rotateStatusText").textContent=r.enabled?"Roterer hvert "+r.intervalSeconds+"s":"Slaaet fra";
+  var t=document.getElementById("rotateToggle");
+  t.textContent=r.enabled?"Slaa fra":"Slaa til";
+  t.classList.toggle("is-live",!!r.enabled);
+  var e=document.getElementById("rotateInterval");
+  if(document.activeElement!==e)e.value=r.intervalSeconds||15;
+}
+document.addEventListener("click",function(e){
+  if(e.target&&e.target.id==="rotateToggle")rotateToggleClick();
+  if(e.target&&e.target.id==="saveRotateBtn")rotateSaveClick();
+});
+var _rr=render;render=function(){_rr();injectRotateUI();renderRotateUI();};
