@@ -30,7 +30,8 @@ function defaultState() {
     templates: [],
     stats: { totalScans: 0, scanLog: [] },
     schedule: { enabled: false, start: null, end: null },
-          capture: { sourceUrl: '', enabled: false, lastCheckedAt: null, lastError: null }
+          capture: { sourceUrl: '', enabled: false, lastCheckedAt: null, lastError: null },
+        rotate: { enabled: false, intervalSeconds: 15, lastRotatedAt: null }
   };
 }
 
@@ -45,7 +46,7 @@ function loadState() {
   try {
     const loaded = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     // merge with defaults so upgrades from older data.json don't crash on missing fields
-    return { ...defaultState(), ...loaded, stats: { ...defaultState().stats, ...(loaded.stats || {}) }, schedule: { ...defaultState().schedule, ...(loaded.schedule || {}) }, capture: { ...defaultState().capture, ...(loaded.capture || {}) } };
+    return { ...defaultState(), ...loaded, stats: { ...defaultState().stats, ...(loaded.stats || {}) }, schedule: { ...defaultState().schedule, ...(loaded.schedule || {}) }, capture: { ...defaultState().capture, ...(loaded.capture || {}) }, rotate: { ...defaultState().rotate, ...(loaded.rotate || {}) } };
   } catch (e) {
     const fresh = defaultState();
     saveState(fresh);
@@ -403,3 +404,36 @@ server.listen(PORT, () => {
   console.log(`Admin: http://localhost:${PORT}/admin`);
   console.log(`Skærm: http://localhost:${PORT}/display`);
 });
+
+
+// --- Rotation: automatically generate a new sessionId every N seconds, so the
+// QR code visually changes on its own. This is entirely our own session token
+// (not tied to any bank or ID provider) -- it just makes an old screenshot of
+// the code stop matching what's shown moments later. ---
+app.post('/api/rotate-settings', requireAdmin, (req, res) => {
+    const { enabled, intervalSeconds } = req.body;
+    if (enabled !== undefined) state.rotate.enabled = !!enabled;
+    if (intervalSeconds !== undefined) {
+          const n = parseInt(intervalSeconds, 10);
+          if (Number.isFinite(n) && n >= 3) state.rotate.intervalSeconds = n;
+    }
+    state.rotate.lastRotatedAt = Date.now();
+    saveState(state);
+    io.emit('admin-state-update', state);
+    res.json(state.rotate);
+});
+
+setInterval(() => {
+    if (!state.rotate || !state.rotate.enabled) return;
+    const now = Date.now();
+    const last = state.rotate.lastRotatedAt || 0;
+    const intervalMs = (state.rotate.intervalSeconds || 15) * 1000;
+    if (now - last >= intervalMs) {
+          state.sessionId = genId();
+          state.rotate.lastRotatedAt = now;
+          state.lastUpdated = now;
+          saveState(state);
+          io.emit('state-update', publicPayload());
+          io.emit('admin-state-update', state);
+    }
+}, 1000);
