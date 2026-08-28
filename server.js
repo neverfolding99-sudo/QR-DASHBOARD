@@ -415,7 +415,7 @@ app.post('/api/rotate-settings', requireAdmin, (req, res) => {
     if (enabled !== undefined) state.rotate.enabled = !!enabled;
     if (intervalSeconds !== undefined) {
           const n = parseInt(intervalSeconds, 10);
-          if (Number.isFinite(n) && n >= 3) state.rotate.intervalSeconds = n;
+          if (Number.isFinite(n) && n >= 1) state.rotate.intervalSeconds = n;
     }
     state.rotate.lastRotatedAt = Date.now();
     saveState(state);
