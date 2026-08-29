@@ -68,9 +68,9 @@ function render(state){
         title.textContent = state.title || 'Scan for dit tilbud';
         msg.textContent = state.message || '';
 
-      const url = state.sessionId
-          ? `${window.location.origin}/r/${state.sessionId}`
-              : (state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk');
+      const url = state.target && state.target.trim()
+          ? state.target.trim()
+          : 'https://mit-dkerhverv.com';
         drawQR(url);
   } else {
         qrBox.style.display = 'none';
