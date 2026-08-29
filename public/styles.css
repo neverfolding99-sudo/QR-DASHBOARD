@@ -225,13 +225,23 @@ button.ghost:hover{border-color:var(--forest);}
   background:#fff;
   padding:14px;
   border-radius:12px;
-  box-shadow:0 6px 18px -6px rgba(19,46,40,0.25);
+  border:1px solid rgba(19,46,40,0.06);
+  box-shadow:0 6px 18px -6px rgba(19,46,40,0.18);
   margin-bottom:16px;
 }
 #qrcode, #displayQrcode{width:180px;height:180px;}
 .screen .footline{font-size:12px;color:var(--ink-soft);}
 .offline-msg{color:var(--ink-soft);font-size:13.5px;max-width:220px;}
-.offline-msg strong{display:block;color:var(--forest-deep);font-size:15px;margin-bottom:6px;font-family:'Fraunces',serif;}
+.offline-msg strong{display:block;color:var(--forest-deep);font-size:16px;margin-bottom:8px;font-family:'Fraunces',serif;font-weight:500;}
+.offline-msg::before{
+  content:"";
+  display:block;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--gold);
+  margin:0 auto 14px;
+}
 table{width:100%;border-collapse:collapse;font-size:13.5px;}
 th{
   text-align:left;
@@ -367,7 +377,7 @@ tr:last-child td{border-bottom:none;}
   font-family:'IBM Plex Mono',monospace;
   font-size:10.5px;
   letter-spacing:0.04em;
-  color:rgba(19,36,32,0.4);
+  color:rgba(19,36,32,0.32);
   z-index:2;
 }
 
