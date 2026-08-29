@@ -264,10 +264,7 @@ tr:last-child td{border-bottom:none;}
   display:flex;
   align-items:center;
   justify-content:center;
-  background:
-    radial-gradient(circle at 20% 15%, rgba(127,217,182,0.10), transparent 55%),
-    radial-gradient(circle at 85% 80%, rgba(127,217,182,0.08), transparent 50%),
-    var(--forest-deep);
+  background:#FFFFFF;
   padding:5vh 5vw;
 }
 .display-screen{
