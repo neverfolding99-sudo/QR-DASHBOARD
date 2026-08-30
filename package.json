@@ -1,7 +1,7 @@
 {
   "name": "qr-dashboard",
   "version": "1.0.0",
-  "description": "Live QR-panel til regningoutbounn.dk",
+  "description": "Live QR-panel til miterhverv.dk",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
