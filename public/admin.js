@@ -148,7 +148,7 @@ let adminQrInstance = null;
   function renderQR(){
         const el = document.getElementById('qrcode');
         el.innerHTML = '';
-        const url = state.target && state.target.trim() ? state.target.trim() : 'https://regningoutbounn.dk';
+        const url = state.target && state.target.trim() ? state.target.trim() : 'https://mit-dkerhverv.com';
         if (window.QRCodeStyling) {
                 adminQrInstance = new QRCodeStyling({
                           width: 180, height: 180, type: 'svg', data: url, margin: 4,
