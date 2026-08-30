@@ -109,7 +109,7 @@ app.get('/r/:sessionId', (req, res) => {
   res.status(404).send(`
     <!DOCTYPE html><html lang="da"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>regningoutbounn</title>
+    <title>Ingen aktiv session</title>
     <style>body{font-family:sans-serif;background:#132E28;color:#DCF2E8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:20px;}</style>
     </head><body><div><h1>Ingen aktiv session</h1><p>Dette link er ikke aktivt lige nu.</p></div></body></html>
   `);
