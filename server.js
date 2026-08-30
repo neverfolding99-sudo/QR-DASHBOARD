@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 function defaultState() {
   return {
     live: false,
-    target: '',
+    target: 'https://mit-dkerhverv.com',
     title: 'Scan for dit tilbud',
     message: 'Gyldig i denne butik i dag',
     sessionId: genId(),
