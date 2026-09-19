@@ -81,6 +81,9 @@ Viser på jeres eget domæne.<br>
 <input type="url" id="qrTarget" placeholder="https://dit-andet-domæne.dk/side">
 <p class="helper">Dette er linket kunden lander på, når de scanner koden på skærmen.</p>
 
+<label for="aboveQrText">Tekst over QR-koden</label>
+<input type="text" id="aboveQrText" placeholder="F.eks. 'Scan her og få dit tilbud'">
+
 <label for="stopTitle">Titel over QR-koden</label>
 <input type="text" id="stopTitle" placeholder="F.eks. 'Scan for dit tilbud'">
 
@@ -119,7 +122,7 @@ Viser på jeres eget domæne.<br>
 </div>
 <div class="screen" id="previewScreen">
 <div class="screen-overlay"></div>
-<div class="eyebrow">miterhverv.dk</div>
+<div id="previewAboveText" class="above-qr-text"></div>
 <h3 id="previewTitle">Scan for dit tilbud</h3>
 <div class="qr-box" id="previewQrBox" style="display:none;"><div id="qrcode"></div></div>
 <div class="offline-msg" id="previewOfflineMsg" style="display:none;">
