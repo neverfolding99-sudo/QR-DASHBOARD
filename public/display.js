@@ -50,8 +50,8 @@ if(signature === lastSignature) return;
 lastSignature = signature;
 
 const screen = document.getElementById('screen');
-const bgDef = bgOptions.find(b=>b.id===state.bg) || bgOptions[0];
-screen.style.backgroundImage = bgDef.css;
+screen.style.backgroundImage = 'none';
+screen.style.background = '#ffffff';
 screen.classList.toggle('offline', !state.live);
 
 const qrBox = document.getElementById('qrBox');
@@ -111,13 +111,11 @@ render(state);
 
 poll();
 
-// WebSocket - instant updates
 const socket = io({ transports: ['websocket', 'polling'] });
 socket.on('connect', () => { socketConnected = true; updateSyncStatus(); poll(); });
 socket.on('disconnect', () => { socketConnected = false; updateSyncStatus(); });
 socket.on('state-update', (state) => { render(state); poll(); });
 
-// FIXED: poll every 200ms instead of 1000ms for fast display updates
 setInterval(poll, 200);
 setInterval(updateSyncStatus, 1000);
 
