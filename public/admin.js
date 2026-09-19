@@ -1,8 +1,8 @@
 const bgOptions = [
-  {id:'mint', css:'linear-gradient(135deg,#DCF2E8,#C3E9DA)'},
-  {id:'forest', css:'linear-gradient(135deg,#1F4B3F,#132E28)'},
-  {id:'cream', css:'linear-gradient(135deg,#F5F2EA,#EDE7D8)'},
-  {id:'gold', css:'linear-gradient(135deg,#F1DFB8,#DDBE7C)'}
+{id:'mint', css:'linear-gradient(135deg,#DCF2E8,#C3E9DA)'},
+{id:'forest', css:'linear-gradient(135deg,#1F4B3F,#132E28)'},
+{id:'cream', css:'linear-gradient(135deg,#F5F2EA,#EDE7D8)'},
+{id:'gold', css:'linear-gradient(135deg,#F1DFB8,#DDBE7C)'}
 ];
 
 let state = null;
@@ -30,26 +30,96 @@ async function apiPost(url, body){
   return res.json();
 }
 
-// --- Login ---
+// --- Login med Telegram 2FA ---
+let _loginSession = null;
+
 document.getElementById('loginBtn').addEventListener('click', doLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+document.getElementById('loginOtpInput').addEventListener('keydown', e => { if(e.key === 'Enter') verifyOtp(); });
+document.getElementById('loginVerifyBtn').addEventListener('click', verifyOtp);
 
 async function doLogin(){
   const pw = document.getElementById('loginPassword').value;
-  const res = await fetch('/api/login', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ password: pw })
-  });
-  const data = await res.json();
-  if(data.ok){
-    adminPassword = pw;
-    sessionStorage.setItem('adminPassword', pw);
-    showApp();
-  } else {
+  if(!pw) return;
+
+  const loginBtn = document.getElementById('loginBtn');
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Sender kode...';
+  document.getElementById('loginError').classList.remove('show');
+
+  try {
+    const res = await fetch('/api/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+
+    if(data.ok) {
+      adminPassword = pw;
+      sessionStorage.setItem('adminPassword', pw);
+      showApp();
+    } else if(data.otp_sent) {
+      _loginSession = data.session;
+      adminPassword = pw;
+      document.getElementById('loginStep1').style.display = 'none';
+      document.getElementById('loginStep2').style.display = 'block';
+      document.getElementById('loginOtpInput').focus();
+    } else {
+      document.getElementById('loginError').textContent = 'Forkert adgangskode';
+      document.getElementById('loginError').classList.add('show');
+    }
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Netværksfejl – prøv igen';
     document.getElementById('loginError').classList.add('show');
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Log ind';
   }
 }
+
+async function verifyOtp(){
+  const otp = document.getElementById('loginOtpInput').value.trim();
+  if(!otp) return;
+
+  const btn = document.getElementById('loginVerifyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Verificerer...';
+  document.getElementById('loginOtpError').classList.remove('show');
+
+  try {
+    const res = await fetch('/api/login/verify', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ session: _loginSession, otp })
+    });
+    const data = await res.json();
+
+    if(data.ok) {
+      sessionStorage.setItem('adminPassword', adminPassword);
+      showApp();
+    } else {
+      document.getElementById('loginOtpError').textContent = data.error || 'Forkert kode';
+      document.getElementById('loginOtpError').classList.add('show');
+      document.getElementById('loginOtpInput').value = '';
+      document.getElementById('loginOtpInput').focus();
+    }
+  } catch(e) {
+    document.getElementById('loginOtpError').textContent = 'Netværksfejl – prøv igen';
+    document.getElementById('loginOtpError').classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Bekræft';
+  }
+}
+
+document.getElementById('loginBackBtn').addEventListener('click', () => {
+  _loginSession = null;
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginOtpInput').value = '';
+  document.getElementById('loginPassword').focus();
+});
 
 async function showApp(){
   try{
@@ -65,12 +135,10 @@ async function showApp(){
   connectSocket();
 }
 
-// try auto-login with a stored password
 if(adminPassword){
   showApp();
 }
 
-// --- Socket for instant sync across admin tabs ---
 function connectSocket(){
   const socket = io();
   socket.on('admin-state-update', (s) => {
@@ -79,7 +147,6 @@ function connectSocket(){
   });
 }
 
-// --- Nav ---
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -145,28 +212,28 @@ function render(){
 }
 
 let adminQrInstance = null;
-  function renderQR(){
-        const el = document.getElementById('qrcode');
-        el.innerHTML = '';
-        const url = state.target && state.target.trim() ? state.target.trim() : 'https://mit-dkerhverv.com';
-        if (window.QRCodeStyling) {
-                adminQrInstance = new QRCodeStyling({
-                          width: 180, height: 180, type: 'svg', data: url, margin: 4,
-                          qrOptions: { errorCorrectionLevel: 'M' },
-                          dotsOptions: { type: 'rounded', color: '#132E28' },
-                          cornersSquareOptions: { type: 'extra-rounded', color: '#132E28' },
-                          cornersDotOptions: { type: 'dot', color: '#1F4B3F' },
-                          backgroundOptions: { color: '#ffffff' }
-                });
-                adminQrInstance.append(el);
-        } else if (window.QRCode) {
-                new QRCode(el, {
-                          text: url, width: 180, height: 180,
-                          colorDark: '#132E28', colorLight: '#ffffff',
-                          correctLevel: QRCode.CorrectLevel.M
-                });
-        }
+function renderQR(){
+  const el = document.getElementById('qrcode');
+  el.innerHTML = '';
+  const url = state.target && state.target.trim() ? state.target.trim() : 'https://mit-dkerhverv.com';
+  if (window.QRCodeStyling) {
+    adminQrInstance = new QRCodeStyling({
+      width: 180, height: 180, type: 'svg', data: url, margin: 4,
+      qrOptions: { errorCorrectionLevel: 'M' },
+      dotsOptions: { type: 'rounded', color: '#132E28' },
+      cornersSquareOptions: { type: 'extra-rounded', color: '#132E28' },
+      cornersDotOptions: { type: 'dot', color: '#1F4B3F' },
+      backgroundOptions: { color: '#ffffff' }
+    });
+    adminQrInstance.append(el);
+  } else if (window.QRCode) {
+    new QRCode(el, {
+      text: url, width: 180, height: 180,
+      colorDark: '#132E28', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
   }
+}
 
 function renderSwatches(){
   const wrap = document.getElementById('bgSwatches');
@@ -196,12 +263,7 @@ function renderCustomers(){
   empty.style.display='none';
   state.customers.slice().reverse().forEach(c=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${c.ref}</td>
-      <td>${c.session}</td>
-      <td>${fmtTime(c.started)}</td>
-      <td><span class="pill ${c.status==='active'?'active':'done'}">${c.status==='active'?'I gang':'Afsluttet'}</span></td>
-    `;
+    tr.innerHTML = `<td>${c.ref}</td><td>${c.session}</td><td>${fmtTime(c.started)}</td><td><span class="pill ${c.status==='active'?'active':'done'}">${c.status==='active'?'I gang':'Afsluttet'}</span></td>`;
     rows.appendChild(tr);
   });
 }
@@ -261,16 +323,7 @@ function renderTemplates(){
   templates.slice().reverse().forEach(t => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);';
-    row.innerHTML = `
-      <div>
-        <div style="font-weight:500;color:var(--forest-deep);margin-bottom:2px;">${escapeHtml(t.name)}</div>
-        <div style="font-size:12.5px;color:var(--ink-soft);">${escapeHtml(t.title || '')} ${t.target ? '· ' + escapeHtml(t.target) : ''}</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button class="ghost apply-tpl" data-id="${t.id}">Brug</button>
-        <button class="ghost delete-tpl" data-id="${t.id}" style="color:#B4453A;">Slet</button>
-      </div>
-    `;
+    row.innerHTML = `<div><div style="font-weight:500;color:var(--forest-deep);margin-bottom:2px;">${escapeHtml(t.name)}</div><div style="font-size:12.5px;color:var(--ink-soft);">${escapeHtml(t.title || '')} ${t.target ? '· ' + escapeHtml(t.target) : ''}</div></div><div style="display:flex;gap:8px;flex-shrink:0;"><button class="ghost apply-tpl" data-id="${t.id}">Brug</button><button class="ghost delete-tpl" data-id="${t.id}" style="color:#B4453A;">Slet</button></div>`;
     wrap.appendChild(row);
   });
 
@@ -361,10 +414,7 @@ document.getElementById('scheduleToggle').addEventListener('click', async () => 
 document.getElementById('saveScheduleBtn').addEventListener('click', async () => {
   const startVal = document.getElementById('scheduleStart').value;
   const endVal = document.getElementById('scheduleEnd').value;
-  if(!startVal || !endVal){
-    alert('Vælg både start- og sluttidspunkt.');
-    return;
-  }
+  if(!startVal || !endVal){ alert('Vælg både start- og sluttidspunkt.'); return; }
   const newSchedule = await apiPost('/api/schedule', {
     enabled: state.schedule ? state.schedule.enabled : false,
     start: new Date(startVal).toISOString(),
@@ -384,10 +434,7 @@ async function loadStats(){
   const rows = document.getElementById('statRows');
   const empty = document.getElementById('statEmpty');
   rows.innerHTML = '';
-  if(!stats.recent.length){
-    empty.style.display = 'block';
-    return;
-  }
+  if(!stats.recent.length){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   stats.recent.forEach(s => {
     const tr = document.createElement('tr');
@@ -396,11 +443,11 @@ async function loadStats(){
   });
 }
 
-
+// --- Capture (screen share) ---
 let captureStream = null;
 let captureScanning = false;
 let captureRafId = null;
-let capturePushEnabled = false;
+let capturePushEnabled = true;
 let captureLastPushed = null;
 let captureLastPushAt = 0;
 const captureCanvas = document.createElement('canvas');
@@ -410,222 +457,196 @@ document.getElementById('captureStartBtn').addEventListener('click', startScreen
 document.getElementById('captureStopBtn').addEventListener('click', stopScreenShare);
 document.getElementById('capturePushToggle').addEventListener('click', toggleCapturePush);
 
+document.getElementById('capturePushToggle').textContent = 'Send til kundeskærm: til';
+
 async function startScreenShare(){
-    clearCaptureErr();
-    const video = document.getElementById('screenVideo');
-    try {
-          captureStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
-    } catch(e) {
-          showCaptureErr('Kunne ikke starte skaermdeling. Vaelg det vindue hvor QR-koden vises, og proev igen.');
-          return;
-    }
-    video.srcObject = captureStream;
-    await video.play();
-    captureStream.getVideoTracks()[0].addEventListener('ended', stopScreenShare);
+  clearCaptureErr();
+  const video = document.getElementById('screenVideo');
+  try {
+    captureStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 10 }, audio: false });
+  } catch(e) {
+    showCaptureErr('Kunne ikke starte skærmdeling. Vælg det vindue hvor QR-koden vises, og prøv igen.');
+    return;
+  }
+  video.srcObject = captureStream;
+  await video.play();
+  captureStream.getVideoTracks()[0].addEventListener('ended', stopScreenShare);
 
   document.getElementById('screenPlaceholder').style.display = 'none';
-    document.getElementById('captureStartBtn').style.display = 'none';
-    document.getElementById('captureStopBtn').style.display = 'inline-block';
-    setCaptureStatus(true, 'Soeger efter QR-kode...');
+  document.getElementById('captureStartBtn').style.display = 'none';
+  document.getElementById('captureStopBtn').style.display = 'inline-block';
+  setCaptureStatus(true, 'Søger efter QR-kode...');
 
   captureScanning = true;
-    captureScanLoop();
+  captureScanLoop();
 }
 
 function stopScreenShare(){
-    captureScanning = false;
-    if(captureRafId) cancelAnimationFrame(captureRafId);
-    if(captureStream) captureStream.getTracks().forEach(t=>t.stop());
-    captureStream = null;
-    const video = document.getElementById('screenVideo');
-    if(video) video.srcObject = null;
-    const ph = document.getElementById('screenPlaceholder');
-    if(ph) ph.style.display = 'flex';
-    const startBtn = document.getElementById('captureStartBtn');
-    const stopBtn = document.getElementById('captureStopBtn');
-    if(startBtn) startBtn.style.display = 'inline-block';
-    if(stopBtn) stopBtn.style.display = 'none';
-    setCaptureStatus(false, 'Skaermdeling stoppet');
+  captureScanning = false;
+  if(captureRafId) cancelAnimationFrame(captureRafId);
+  if(captureStream) captureStream.getTracks().forEach(t=>t.stop());
+  captureStream = null;
+  const video = document.getElementById('screenVideo');
+  if(video) video.srcObject = null;
+  const ph = document.getElementById('screenPlaceholder');
+  if(ph) ph.style.display = 'flex';
+  const startBtn = document.getElementById('captureStartBtn');
+  const stopBtn = document.getElementById('captureStopBtn');
+  if(startBtn) startBtn.style.display = 'inline-block';
+  if(stopBtn) stopBtn.style.display = 'none';
+  setCaptureStatus(false, 'Skærmdeling stoppet');
 }
 
 function captureScanLoop(){
-    if(!captureScanning) return;
-    const video = document.getElementById('screenVideo');
-    if(video && video.readyState === video.HAVE_ENOUGH_DATA){
-          const w = video.videoWidth, h = video.videoHeight;
-          if(w && h){
-                  captureCanvas.width = w;
-                  captureCanvas.height = h;
-                  captureCtx.drawImage(video, 0, 0, w, h);
-                  const img = captureCtx.getImageData(0, 0, w, h);
-                  const code = window.jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' });
-                  if(code && code.data){
-                            onCaptureDecoded(code.data);
-                  }
-          }
+  if(!captureScanning) return;
+  const video = document.getElementById('screenVideo');
+  if(video && video.readyState === video.HAVE_ENOUGH_DATA){
+    const w = video.videoWidth, h = video.videoHeight;
+    if(w && h){
+      captureCanvas.width = w;
+      captureCanvas.height = h;
+      captureCtx.drawImage(video, 0, 0, w, h);
+      const img = captureCtx.getImageData(0, 0, w, h);
+      const code = window.jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' });
+      if(code && code.data) onCaptureDecoded(code.data);
     }
-    captureRafId = requestAnimationFrame(captureScanLoop);
+  }
+  captureRafId = requestAnimationFrame(captureScanLoop);
 }
 
 function onCaptureDecoded(value){
-    const readEl = document.getElementById('captureReadValue');
-    if(readEl) readEl.value = value;
-    setCaptureStatus(true, 'Kode aflaest');
-    if(!capturePushEnabled) return;
-    const now = Date.now();
-    if(value === captureLastPushed && now - captureLastPushAt < 1500) return;
-    captureLastPushed = value;
-    captureLastPushAt = now;
-    pushCaptureToDisplay(value);
+  const readEl = document.getElementById('captureReadValue');
+  if(readEl) readEl.value = value;
+  setCaptureStatus(true, 'Kode aflæst ✓');
+  if(!capturePushEnabled) return;
+  const now = Date.now();
+  if(value === captureLastPushed && now - captureLastPushAt < 300) return;
+  captureLastPushed = value;
+  captureLastPushAt = now;
+  pushCaptureToDisplay(value);
 }
 
 async function pushCaptureToDisplay(value){
-    try{
-          const res = await fetch('/api/capture-push', {
-                  method:'POST',
-                  headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
-                  body: JSON.stringify({ target: value })
-          });
-          if(res.ok){
-                  state = await apiGet('/api/state');
-                  render();
-          } else {
-                  showCaptureErr('Kunne ikke sende til skaermen. Er du stadig logget ind?');
-          }
-    }catch(e){
-          showCaptureErr('Netvaerksfejl ved afsendelse til skaermen.');
+  try{
+    const res = await fetch('/api/capture-push', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
+      body: JSON.stringify({ target: value })
+    });
+    if(res.ok){
+      state = await apiGet('/api/state');
+      render();
+      clearCaptureErr();
+    } else {
+      showCaptureErr('Kunne ikke sende til skærmen. Er du stadig logget ind?');
     }
+  }catch(e){
+    showCaptureErr('Netværksfejl ved afsendelse til skærmen.');
+  }
 }
 
 function toggleCapturePush(){
-    capturePushEnabled = !capturePushEnabled;
-    const toggleBtn = document.getElementById('capturePushToggle');
-    const statusEl = document.getElementById('capturePushStatus');
-    if(toggleBtn) toggleBtn.textContent = 'Send til kundeskaerm: ' + (capturePushEnabled ? 'til' : 'fra');
-    if(statusEl) statusEl.textContent = capturePushEnabled
-      ? 'Sender aflaest kode live til kundeskaerm'
-          : 'Sender ikke til kundeskaerm';
-    if(capturePushEnabled && captureLastPushed === null){
-          const cur = document.getElementById('captureReadValue').value;
-          if(cur && cur !== '-'){ captureLastPushed = cur; captureLastPushAt = Date.now(); pushCaptureToDisplay(cur); }
-    }
+  capturePushEnabled = !capturePushEnabled;
+  const toggleBtn = document.getElementById('capturePushToggle');
+  const statusEl = document.getElementById('capturePushStatus');
+  if(toggleBtn) toggleBtn.textContent = 'Send til kundeskærm: ' + (capturePushEnabled ? 'til' : 'fra');
+  if(statusEl) statusEl.textContent = capturePushEnabled
+    ? 'Sender aflæst kode live til kundeskærm'
+    : 'Sender ikke til kundeskærm';
+  if(capturePushEnabled && captureLastPushed === null){
+    const cur = document.getElementById('captureReadValue').value;
+    if(cur && cur !== '—'){ captureLastPushed = cur; captureLastPushAt = Date.now(); pushCaptureToDisplay(cur); }
+  }
 }
 
 function setCaptureStatus(active, text){
-    const dot = document.getElementById('captureDot');
-    const textEl = document.getElementById('captureStatusText');
-    if(!dot) return;
-    dot.classList.toggle('live', !!active);
-    if(textEl) textEl.textContent = text;
+  const dot = document.getElementById('captureDot');
+  const textEl = document.getElementById('captureStatusText');
+  if(!dot) return;
+  dot.classList.toggle('live', !!active);
+  if(textEl) textEl.textContent = text;
 }
 
-function showCaptureErr(msg){
-    const el = document.getElementById('captureErr');
-    if(el) el.textContent = msg;
-}
-function clearCaptureErr(){
-    const el = document.getElementById('captureErr');
-    if(el) el.textContent = '';
-}
+function showCaptureErr(msg){ const el = document.getElementById('captureErr'); if(el) el.textContent = msg; }
+function clearCaptureErr(){ const el = document.getElementById('captureErr'); if(el) el.textContent = ''; }
 
 window.addEventListener('pagehide', stopScreenShare);
 
+setInterval(async () => {
+  try { await fetch('/api/public-state', { cache: 'no-store' }); } catch(e) {}
+}, 4 * 60 * 1000);
 
-                                                                      document.getElementById('captureFetchNowBtn').addEventListener('click', captureFetchNow);
+document.getElementById('captureFetchNowBtn').addEventListener('click', captureFetchNow);
 document.getElementById('captureSaveUrlBtn').addEventListener('click', captureSaveUrl);
 document.getElementById('captureAutoToggle').addEventListener('click', captureToggleAuto);
 
 async function captureFetchNow(){
-    const url = document.getElementById('captureSourceUrl').value.trim();
-    if(!url){ showCaptureUrlErr('Indsaet en URL foerst.'); return; }
-    clearCaptureUrlErr();
-    const btn = document.getElementById('captureFetchNowBtn');
-    const original = btn.textContent;
-    btn.textContent = 'Henter...';
-    btn.disabled = true;
-    try{
-          const res = await fetch('/api/capture-url', {
-                  method:'POST',
-                  headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
-                  body: JSON.stringify({ url })
-          });
-          const data = await res.json();
-          if(!res.ok){
-                  showCaptureUrlErr(data.error || 'Kunne ikke hente QR-koden.');
-          } else {
-                  state = await apiGet('/api/state');
-                  render();
-          }
-    }catch(e){
-          showCaptureUrlErr('Netvaerksfejl ved hentning.');
-    }finally{
-          btn.textContent = original;
-          btn.disabled = false;
-    }
+  const url = document.getElementById('captureSourceUrl').value.trim();
+  if(!url){ showCaptureUrlErr('Indsæt en URL først.'); return; }
+  clearCaptureUrlErr();
+  const btn = document.getElementById('captureFetchNowBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Henter...';
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/capture-url', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-password':adminPassword},
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if(!res.ok){ showCaptureUrlErr(data.error || 'Kunne ikke hente QR-koden.'); }
+    else { state = await apiGet('/api/state'); render(); }
+  }catch(e){ showCaptureUrlErr('Netværksfejl ved hentning.'); }
+  finally{ btn.textContent = original; btn.disabled = false; }
 }
 
-
 async function captureSaveUrl(){
-    const url = document.getElementById('captureSourceUrl').value.trim();
-    await apiPost('/api/capture-settings', { sourceUrl: url });
-    state = await apiGet('/api/state');
-    render();
+  const url = document.getElementById('captureSourceUrl').value.trim();
+  await apiPost('/api/capture-settings', { sourceUrl: url });
+  state = await apiGet('/api/state');
+  render();
 }
 
 async function captureToggleAuto(){
-    const url = document.getElementById('captureSourceUrl').value.trim();
-    if(!url){ showCaptureUrlErr('Indsaet og gem en URL, foer du slaar automatisk opdatering til.'); return; }
-    const toggleBtn = document.getElementById('captureAutoToggle');
-    const turningOn = toggleBtn.textContent.trim() === 'Slaa til';
-    await apiPost('/api/capture-settings', { sourceUrl: url, enabled: turningOn });
-    state = await apiGet('/api/state');
-    render();
+  const url = document.getElementById('captureSourceUrl').value.trim();
+  if(!url){ showCaptureUrlErr('Indsæt og gem en URL, før du slår automatisk opdatering til.'); return; }
+  const toggleBtn = document.getElementById('captureAutoToggle');
+  const turningOn = toggleBtn.textContent.trim() === 'Slå til';
+  await apiPost('/api/capture-settings', { sourceUrl: url, enabled: turningOn });
+  state = await apiGet('/api/state');
+  render();
 }
 
 function renderCaptureUrlState(){
-    if(!state || !state.capture) return;
-    const c = state.capture;
-    const urlEl = document.getElementById('captureSourceUrl');
-    if(document.activeElement !== urlEl) urlEl.value = c.sourceUrl || '';
+  if(!state || !state.capture) return;
+  const c = state.capture;
+  const urlEl = document.getElementById('captureSourceUrl');
+  if(document.activeElement !== urlEl) urlEl.value = c.sourceUrl || '';
 
   const toggleBtn = document.getElementById('captureAutoToggle');
-    if(toggleBtn){
-          toggleBtn.textContent = c.enabled ? 'Slaa fra' : 'Slaa til';
-          toggleBtn.classList.toggle('is-live', !!c.enabled);
-    }
+  if(toggleBtn){ toggleBtn.textContent = c.enabled ? 'Slå fra' : 'Slå til'; toggleBtn.classList.toggle('is-live', !!c.enabled); }
 
   const statusEl = document.getElementById('captureUrlStatus');
-    if(statusEl){
-          statusEl.value = c.lastError ? c.lastError : (c.lastCheckedAt ? 'Hentet korrekt' : 'Ikke hentet endnu');
-    }
-    const checkedEl = document.getElementById('captureUrlChecked');
-    if(checkedEl){
-          checkedEl.value = c.lastCheckedAt ? fmtTime(c.lastCheckedAt) : '-';
-    }
+  if(statusEl){ statusEl.value = c.lastError ? c.lastError : (c.lastCheckedAt ? 'Hentet korrekt' : 'Ikke hentet endnu'); }
+  const checkedEl = document.getElementById('captureUrlChecked');
+  if(checkedEl){ checkedEl.value = c.lastCheckedAt ? fmtTime(c.lastCheckedAt) : '-'; }
 }
 
-function showCaptureUrlErr(msg){
-    const el = document.getElementById('captureUrlErr');
-    if(el) el.textContent = msg;
-}
-function clearCaptureUrlErr(){
-    const el = document.getElementById('captureUrlErr');
-    if(el) el.textContent = '';
-}
+function showCaptureUrlErr(msg){ const el = document.getElementById('captureUrlErr'); if(el) el.textContent = msg; }
+function clearCaptureUrlErr(){ const el = document.getElementById('captureUrlErr'); if(el) el.textContent = ''; }
 
 const _originalRenderForCapture = render;
-render = function(){
-    _originalRenderForCapture();
-    renderCaptureUrlState();
-};
+render = function(){ _originalRenderForCapture(); renderCaptureUrlState(); };
 
+// --- Auto-rotation UI ---
 function injectRotateUI(){
   if(document.getElementById("rotateToggle")) return;
   var a=document.querySelector("#view-session .grid > div");
   if(!a) return;
   var c=document.createElement("div");
   c.className="card";
-  c.innerHTML=["<h2>Automatisk rotation<\/h2>","<p class=\"sub\">Skift QR til ny session automatisk hvert X sekunder.<\/p>","<div class=\"status-row\"><span class=\"dot\" id=\"rotateDot\"><\/span><span class=\"status-text\" id=\"rotateStatusText\">Slaaet fra<\/span><button class=\"toggle\" id=\"rotateToggle\">Slaa til<\/button><\/div>","<label>Sekunder<\/label><input type=\"number\" id=\"rotateInterval\" min=\"3\" step=\"1\" placeholder=\"15\">","<div class=\"actions\"><button class=\"primary\" id=\"saveRotateBtn\">Gem<\/button><span class=\"save-msg\" id=\"rotateSaveMsg\">Gemt<\/span><\/div>"].join("");
+  c.innerHTML="<h2>Automatisk rotation</h2><p class=\"sub\">Skift QR til ny session automatisk hvert X sekunder.</p><div class=\"status-row\"><span class=\"dot\" id=\"rotateDot\"></span><span class=\"status-text\" id=\"rotateStatusText\">Slået fra</span><button class=\"toggle\" id=\"rotateToggle\">Slå til</button></div><label>Sekunder</label><input type=\"number\" id=\"rotateInterval\" min=\"3\" step=\"1\" placeholder=\"15\"><div class=\"actions\"><button class=\"primary\" id=\"saveRotateBtn\">Gem</button><span class=\"save-msg\" id=\"rotateSaveMsg\">Gemt</span></div>";
   a.appendChild(c);
 }
 async function rotateToggleClick(){
@@ -646,9 +667,9 @@ function renderRotateUI(){
   var r=state.rotate,d=document.getElementById("rotateDot");
   if(!d)return;
   d.classList.toggle("live",!!r.enabled);
-  document.getElementById("rotateStatusText").textContent=r.enabled?"Roterer hvert "+r.intervalSeconds+"s":"Slaaet fra";
+  document.getElementById("rotateStatusText").textContent=r.enabled?"Roterer hvert "+r.intervalSeconds+"s":"Slået fra";
   var t=document.getElementById("rotateToggle");
-  t.textContent=r.enabled?"Slaa fra":"Slaa til";
+  t.textContent=r.enabled?"Slå fra":"Slå til";
   t.classList.toggle("is-live",!!r.enabled);
   var e=document.getElementById("rotateInterval");
   if(document.activeElement!==e)e.value=r.intervalSeconds||15;
