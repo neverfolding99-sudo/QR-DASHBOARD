@@ -9,6 +9,7 @@ let lastSignature = null;
 let lastUpdateAt = null;
 let socketConnected = false;
 let qrInstance = null;
+let lastQrUrl = null;
 
 function signatureOf(state){
 return JSON.stringify([state.live, state.target, state.sessionId, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody, state.aboveText]);
@@ -70,7 +71,7 @@ msg.textContent = state.message || '';
 const url = state.target && state.target.trim()
 ? state.target.trim()
 : 'https://mit-dkerhverv.com';
-drawQR(url);
+if(url !== lastQrUrl){ lastQrUrl = url; drawQR(url); }
 } else {
 qrBox.style.display = 'none';
 title.textContent = '';
@@ -113,9 +114,9 @@ poll();
 const socket = io({ transports: ['websocket', 'polling'] });
 socket.on('connect', () => { socketConnected = true; updateSyncStatus(); poll(); });
 socket.on('disconnect', () => { socketConnected = false; updateSyncStatus(); });
-socket.on('state-update', (state) => { render(state); poll(); });
+socket.on('state-update', (state) => { render(state); });
 
-setInterval(poll, 200);
+setInterval(poll, 80);
 setInterval(updateSyncStatus, 1000);
 
 setInterval(() => window.location.reload(), 60 * 60 * 1000);
