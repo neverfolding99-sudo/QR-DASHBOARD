@@ -12,277 +12,297 @@
 <body>
 
 <div class="login-wrap" id="loginWrap">
-  <div class="login-card">
-    <h1>Log ind</h1>
-    <p>Adgang til QR-panelet for miterhverv.dk</p>
-    <div class="login-error" id="loginError">Forkert adgangskode</div>
-    <label for="loginPassword">Adgangskode</label>
-    <input type="password" id="loginPassword" placeholder="••••••••">
-    <button class="primary" id="loginBtn" style="width:100%;text-align:center;">Log ind</button>
-  </div>
+<div class="login-card">
+<h1>Log ind</h1>
+<p>Adgang til QR-panelet for miterhverv.dk</p>
+<div class="login-error" id="loginError">Forkert adgangskode</div>
+
+<!-- Trin 1: Adgangskode -->
+<div id="loginStep1">
+<label for="loginPassword">Adgangskode</label>
+<input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+<button class="primary" id="loginBtn" style="width:100%;text-align:center;">Log ind</button>
+</div>
+
+<!-- Trin 2: Telegram OTP -->
+<div id="loginStep2" style="display:none;">
+<div style="text-align:center;margin-bottom:18px;">
+<div style="font-size:32px;margin-bottom:8px;">📱</div>
+<p style="font-weight:600;color:var(--forest-deep);margin:0 0 4px;">Tjek Telegram</p>
+<p style="font-size:13px;color:var(--ink-soft);margin:0;">Vi har sendt en 6-cifret kode til <strong>@Vladleadsbot</strong></p>
+</div>
+<label for="loginOtpInput">Kode fra Telegram</label>
+<input type="text" id="loginOtpInput" placeholder="123456" maxlength="6" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;font-size:22px;letter-spacing:6px;">
+<div class="login-error" id="loginOtpError" style="display:none;"></div>
+<button class="primary" id="loginVerifyBtn" style="width:100%;text-align:center;margin-top:10px;">Bekræft</button>
+<button class="ghost" id="loginBackBtn" style="width:100%;text-align:center;margin-top:8px;font-size:13px;">← Tilbage</button>
+</div>
+
+</div>
 </div>
 
 <div class="app" id="adminApp" style="display:none;">
-  <aside class="sidebar">
-    <div class="brand">miterhverv
-      <small>QR Panel · Internt</small>
-    </div>
-    <nav class="nav">
-      <button class="nav-btn active" data-view="session">Live session</button>
-      <button class="nav-btn" data-view="templates">Skabeloner</button>
-      <button class="nav-btn" data-view="schedule">Planlægning</button>
-      <button class="nav-btn" data-view="stats">Statistik</button>
-      <button class="nav-btn" data-view="customers">Kunder</button>
-      <button class="nav-btn" data-view="settings">Skærm & besked</button>
-      <button class="nav-btn" data-view="capture">Capture QR</button>
-    </nav>
-    <div class="sidebar-foot">
-      Viser på jeres eget domæne.<br>
-      <a href="/display" target="_blank" style="color:var(--mint);">Åbn skærm-visning ↗</a>
-    </div>
-  </aside>
+<aside class="sidebar">
+<div class="brand">miterhverv
+<small>QR Panel · Internt</small>
+</div>
+<nav class="nav">
+<button class="nav-btn active" data-view="session">Live session</button>
+<button class="nav-btn" data-view="templates">Skabeloner</button>
+<button class="nav-btn" data-view="schedule">Planlægning</button>
+<button class="nav-btn" data-view="stats">Statistik</button>
+<button class="nav-btn" data-view="customers">Kunder</button>
+<button class="nav-btn" data-view="settings">Skærm & besked</button>
+<button class="nav-btn" data-view="capture">Capture QR</button>
+</nav>
+<div class="sidebar-foot">
+Viser på jeres eget domæne.<br>
+<a href="/display" target="_blank" style="color:var(--mint);">Åbn skærm-visning ↗</a>
+</div>
+</aside>
 
-  <main>
-    <section id="view-session">
-      <div class="page-head">
-        <h1>Live session</h1>
-        <p>Styr hvilken QR-kode og besked der vises for kunder lige nu.</p>
-      </div>
+<main>
+<section id="view-session">
+<div class="page-head">
+<h1>Live session</h1>
+<p>Styr hvilken QR-kode og besked der vises for kunder lige nu.</p>
+</div>
 
-      <div class="grid">
-        <div>
-          <div class="card">
-            <div class="status-row">
-              <span class="dot" id="statusDot"></span>
-              <span class="status-text" id="statusText">Offline — intet vises</span>
-              <button class="toggle" id="liveToggle">Sæt live</button>
-            </div>
+<div class="grid">
+<div>
+<div class="card">
+<div class="status-row">
+<span class="dot" id="statusDot"></span>
+<span class="status-text" id="statusText">Offline — intet vises</span>
+<button class="toggle" id="liveToggle">Sæt live</button>
+</div>
 
-            <label for="qrTarget">QR-kode peger på (URL)</label>
-            <input type="url" id="qrTarget" placeholder="https://dit-andet-domæne.dk/side">
-            <p class="helper">Dette er linket kunden lander på, når de scanner koden på skærmen.</p>
+<label for="qrTarget">QR-kode peger på (URL)</label>
+<input type="url" id="qrTarget" placeholder="https://dit-andet-domæne.dk/side">
+<p class="helper">Dette er linket kunden lander på, når de scanner koden på skærmen.</p>
 
-            <label for="stopTitle">Titel over QR-koden</label>
-            <input type="text" id="stopTitle" placeholder="F.eks. 'Scan for dit tilbud'">
+<label for="stopTitle">Titel over QR-koden</label>
+<input type="text" id="stopTitle" placeholder="F.eks. 'Scan for dit tilbud'">
 
-            <label for="stopMsg">Besked under QR-koden</label>
-            <textarea id="stopMsg" rows="2" placeholder="F.eks. 'Gyldig i denne butik i dag'"></textarea>
+<label for="stopMsg">Besked under QR-koden</label>
+<textarea id="stopMsg" rows="2" placeholder="F.eks. 'Gyldig i denne butik i dag'"></textarea>
 
-            <div class="actions">
-              <button class="primary" id="saveBtn">Gem og opdater skærm</button>
-              <button class="ghost" id="newSessionBtn">Ny session-ID</button>
-              <button class="ghost" id="saveAsTemplateBtn">Gem som skabelon</button>
-              <span class="save-msg" id="saveMsg">Gemt ✓ — skærmen opdaterer nu</span>
-            </div>
-          </div>
+<div class="actions">
+<button class="primary" id="saveBtn">Gem og opdater skærm</button>
+<button class="ghost" id="newSessionBtn">Ny session-ID</button>
+<button class="ghost" id="saveAsTemplateBtn">Gem som skabelon</button>
+<span class="save-msg" id="saveMsg">Gemt ✓ — skærmen opdaterer nu</span>
+</div>
+</div>
 
-          <div class="card">
-            <h2>Session-info</h2>
-            <p class="sub">Denne session vises på jeres domæne, når den er sat live.</p>
-            <div class="row">
-              <div>
-                <label>Session-ID</label>
-                <input type="text" id="sessionId" readonly>
-              </div>
-              <div>
-                <label>Sidst opdateret</label>
-                <input type="text" id="lastUpdated" readonly>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="card">
+<h2>Session-info</h2>
+<p class="sub">Denne session vises på jeres domæne, når den er sat live.</p>
+<div class="row">
+<div>
+<label>Session-ID</label>
+<input type="text" id="sessionId" readonly>
+</div>
+<div>
+<label>Sidst opdateret</label>
+<input type="text" id="lastUpdated" readonly>
+</div>
+</div>
+</div>
+</div>
 
-        <div class="preview-wrap">
-          <div class="kiosk">
-            <div class="kiosk-bar">
-              <span class="dot" id="kioskDot"></span>
-              <span id="kioskLabel">LIVE PREVIEW — SÅDAN SER KUNDEN DET</span>
-            </div>
-            <div class="screen" id="previewScreen">
-              <div class="screen-overlay"></div>
-              <div class="eyebrow">miterhverv.dk</div>
-              <h3 id="previewTitle">Scan for dit tilbud</h3>
-              <div class="qr-box" id="previewQrBox" style="display:none;"><div id="qrcode"></div></div>
-              <div class="offline-msg" id="previewOfflineMsg" style="display:none;">
-                <strong id="previewOfflineTitle">Ingen aktiv session</strong>
-                <span id="previewOfflineBody">Kom tilbage senere</span>
-              </div>
-              <div class="footline" id="previewMsg"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+<div class="preview-wrap">
+<div class="kiosk">
+<div class="kiosk-bar">
+<span class="dot" id="kioskDot"></span>
+<span id="kioskLabel">LIVE PREVIEW — SÅDAN SER KUNDEN DET</span>
+</div>
+<div class="screen" id="previewScreen">
+<div class="screen-overlay"></div>
+<div class="eyebrow">miterhverv.dk</div>
+<h3 id="previewTitle">Scan for dit tilbud</h3>
+<div class="qr-box" id="previewQrBox" style="display:none;"><div id="qrcode"></div></div>
+<div class="offline-msg" id="previewOfflineMsg" style="display:none;">
+<strong id="previewOfflineTitle">Ingen aktiv session</strong>
+<span id="previewOfflineBody">Kom tilbage senere</span>
+</div>
+<div class="footline" id="previewMsg"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
 
-    <section id="view-templates" style="display:none;">
-      <div class="page-head">
-        <h1>Skabeloner</h1>
-        <p>Gem en opsætning (titel, besked, link, baggrund) og genbrug den med ét klik.</p>
-      </div>
-      <div class="card">
-        <div id="templateRows"></div>
-        <div class="empty" id="templateEmpty" style="display:none;">
-          Ingen skabeloner endnu. Sæt en session op under "Live session", og gem den herfra.
-        </div>
-      </div>
-    </section>
+<section id="view-templates" style="display:none;">
+<div class="page-head">
+<h1>Skabeloner</h1>
+<p>Gem en opsætning (titel, besked, link, baggrund) og genbrug den med ét klik.</p>
+</div>
+<div class="card">
+<div id="templateRows"></div>
+<div class="empty" id="templateEmpty" style="display:none;">
+Ingen skabeloner endnu. Sæt en session op under "Live session", og gem den herfra.
+</div>
+</div>
+</section>
 
-    <section id="view-schedule" style="display:none;">
-      <div class="page-head">
-        <h1>Planlægning</h1>
-        <p>Lad skærmen automatisk gå live og offline på et fast tidsrum.</p>
-      </div>
-      <div class="card">
-        <div class="status-row">
-          <span class="dot" id="scheduleDot"></span>
-          <span class="status-text" id="scheduleStatusText">Planlægning slået fra</span>
-          <button class="toggle" id="scheduleToggle">Slå til</button>
-        </div>
-        <label for="scheduleStart">Går live</label>
-        <input type="datetime-local" id="scheduleStart">
-        <label for="scheduleEnd">Går offline</label>
-        <input type="datetime-local" id="scheduleEnd">
-        <p class="helper">Når planlægning er slået til, styrer tidsrummet automatisk om skærmen er live — den manuelle knap under "Live session" bliver overstyret, mens planen er aktiv.</p>
-        <div class="actions">
-          <button class="primary" id="saveScheduleBtn">Gem planlægning</button>
-          <span class="save-msg" id="scheduleSaveMsg">Gemt ✓</span>
-        </div>
-      </div>
-    </section>
+<section id="view-schedule" style="display:none;">
+<div class="page-head">
+<h1>Planlægning</h1>
+<p>Lad skærmen automatisk gå live og offline på et fast tidsrum.</p>
+</div>
+<div class="card">
+<div class="status-row">
+<span class="dot" id="scheduleDot"></span>
+<span class="status-text" id="scheduleStatusText">Planlægning slået fra</span>
+<button class="toggle" id="scheduleToggle">Slå til</button>
+</div>
+<label for="scheduleStart">Går live</label>
+<input type="datetime-local" id="scheduleStart">
+<label for="scheduleEnd">Går offline</label>
+<input type="datetime-local" id="scheduleEnd">
+<p class="helper">Når planlægning er slået til, styrer tidsrummet automatisk om skærmen er live — den manuelle knap under "Live session" bliver overstyret, mens planen er aktiv.</p>
+<div class="actions">
+<button class="primary" id="saveScheduleBtn">Gem planlægning</button>
+<span class="save-msg" id="scheduleSaveMsg">Gemt ✓</span>
+</div>
+</div>
+</section>
 
-    <section id="view-stats" style="display:none;">
-      <div class="page-head">
-        <h1>Statistik</h1>
-        <p>Rigtige scanninger — talt når nogen scanner QR-koden og sendes videre til jeres link.</p>
-      </div>
-      <div class="card">
-        <div class="row">
-          <div>
-            <label>Scanninger i alt</label>
-            <input type="text" id="statTotal" readonly>
-          </div>
-          <div>
-            <label>Seneste 24 timer</label>
-            <input type="text" id="statToday" readonly>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Seneste scanninger</h2>
-        <table>
-          <thead><tr><th>Tidspunkt</th><th>Session</th></tr></thead>
-          <tbody id="statRows"></tbody>
-        </table>
-        <div class="empty" id="statEmpty" style="display:none;">
-          Ingen scanninger endnu.
-        </div>
-      </div>
-    </section>
+<section id="view-stats" style="display:none;">
+<div class="page-head">
+<h1>Statistik</h1>
+<p>Rigtige scanninger — talt når nogen scanner QR-koden og sendes videre til jeres link.</p>
+</div>
+<div class="card">
+<div class="row">
+<div>
+<label>Scanninger i alt</label>
+<input type="text" id="statTotal" readonly>
+</div>
+<div>
+<label>Seneste 24 timer</label>
+<input type="text" id="statToday" readonly>
+</div>
+</div>
+</div>
+<div class="card">
+<h2>Seneste scanninger</h2>
+<table>
+<thead><tr><th>Tidspunkt</th><th>Session</th></tr></thead>
+<tbody id="statRows"></tbody>
+</table>
+<div class="empty" id="statEmpty" style="display:none;">
+Ingen scanninger endnu.
+</div>
+</div>
+</section>
 
-    <section id="view-customers" style="display:none;">
-      <div class="page-head">
-        <h1>Kunder i gang</h1>
-        <p>Kunder der har scannet en QR-kode og er i gang med et flow.</p>
-      </div>
-      <div class="card">
-        <table>
-          <thead><tr><th>Kunde-ref</th><th>Session</th><th>Startet</th><th>Status</th></tr></thead>
-          <tbody id="customerRows"></tbody>
-        </table>
-        <div class="empty" id="customerEmpty" style="display:none;">
-          Ingen aktive kunder endnu. Kunder dukker op her, når de scanner en live QR-kode.
-        </div>
-      </div>
-      <div class="card">
-        <h2>Tilføj test-kunde</h2>
-        <p class="sub">Til test af panelet — simulerer en kunde der scanner.</p>
-        <div class="actions">
-          <button class="primary" id="addCustomerBtn">Tilføj test-kunde</button>
-        </div>
-      </div>
-    </section>
+<section id="view-customers" style="display:none;">
+<div class="page-head">
+<h1>Kunder i gang</h1>
+<p>Kunder der har scannet en QR-kode og er i gang med et flow.</p>
+</div>
+<div class="card">
+<table>
+<thead><tr><th>Kunde-ref</th><th>Session</th><th>Startet</th><th>Status</th></tr></thead>
+<tbody id="customerRows"></tbody>
+</table>
+<div class="empty" id="customerEmpty" style="display:none;">
+Ingen aktive kunder endnu. Kunder dukker op her, når de scanner en live QR-kode.
+</div>
+</div>
+<div class="card">
+<h2>Tilføj test-kunde</h2>
+<p class="sub">Til test af panelet — simulerer en kunde der scanner.</p>
+<div class="actions">
+<button class="primary" id="addCustomerBtn">Tilføj test-kunde</button>
+</div>
+</div>
+</section>
 
-    <section id="view-settings" style="display:none;">
-      <div class="page-head">
-        <h1>Skærm & besked</h1>
-        <p>Standardudseende for skærmen når ingen specifik session er sat.</p>
-      </div>
-      <div class="card">
-        <h2>Baggrund</h2>
-        <p class="sub">Vælg farvetone til skærmen kunderne ser.</p>
-        <div class="bg-swatches" id="bgSwatches"></div>
-      </div>
-      <div class="card">
-        <h2>Standardbesked (offline)</h2>
-        <p class="sub">Vises når ingen session er live.</p>
-        <label for="offlineTitle">Titel</label>
-        <input type="text" id="offlineTitle" placeholder="Ingen aktiv session">
-        <label for="offlineBody">Undertekst</label>
-        <textarea id="offlineBody" rows="2" placeholder="Kom tilbage senere"></textarea>
-        <div class="actions">
-          <button class="primary" id="saveSettingsBtn">Gem indstillinger</button>
-          <span class="save-msg" id="settingsSaveMsg">Gemt ✓</span>
-        </div>
-      </div>
-    </section>
+<section id="view-settings" style="display:none;">
+<div class="page-head">
+<h1>Skærm & besked</h1>
+<p>Standardudseende for skærmen når ingen specifik session er sat.</p>
+</div>
+<div class="card">
+<h2>Baggrund</h2>
+<p class="sub">Vælg farvetone til skærmen kunderne ser.</p>
+<div class="bg-swatches" id="bgSwatches"></div>
+</div>
+<div class="card">
+<h2>Standardbesked (offline)</h2>
+<p class="sub">Vises når ingen session er live.</p>
+<label for="offlineTitle">Titel</label>
+<input type="text" id="offlineTitle" placeholder="Ingen aktiv session">
+<label for="offlineBody">Undertekst</label>
+<textarea id="offlineBody" rows="2" placeholder="Kom tilbage senere"></textarea>
+<div class="actions">
+<button class="primary" id="saveSettingsBtn">Gem indstillinger</button>
+<span class="save-msg" id="settingsSaveMsg">Gemt ✓</span>
+</div>
+</div>
+</section>
 
-    <section id="view-capture" style="display:none;">
-      <div class="page-head">
-        <h1>Capture QR</h1>
-        <p>Hent en QR-kode fra en side I selv kontrollerer, så I slipper for at skrive linket ind manuelt.</p>
-      </div>
+<section id="view-capture" style="display:none;">
+<div class="page-head">
+<h1>Capture QR</h1>
+<p>Del en skærm med QR-koden, så den automatisk opdateres på kundeskærmen.</p>
+</div>
 
-      <div class="card">
-        <h2>Hent fra jeres egen side</h2>
-        <p class="sub">Indsæt adressen på en side eller et billede med en QR-kode I selv ejer. Panelet henter og aflæser den automatisk.</p>
-        <label for="captureSourceUrl">Side- eller billed-URL</label>
-        <input type="text" id="captureSourceUrl" placeholder="https://jeres-side.dk/side-med-qr">
-        <div class="actions">
-          <button class="primary" id="captureFetchNowBtn">Hent nu</button>
-          <button class="ghost" id="captureSaveUrlBtn">Gem adresse</button>
-        </div>
-        <div class="status-row" style="margin-top:14px;">
-          <span>Hold automatisk opdateret (hvert 20. sek.)</span>
-          <button class="toggle" id="captureAutoToggle">Slå til</button>
-        </div>
-        <div class="row" style="margin-top:14px;">
-          <div>
-            <label>Status</label>
-            <input type="text" id="captureUrlStatus" readonly>
-          </div>
-          <div>
-            <label>Sidst tjekket</label>
-            <input type="text" id="captureUrlChecked" readonly>
-          </div>
-        </div>
-        <div class="save-msg" id="captureUrlErr" style="color:#B4453A;"></div>
-      </div>
+<div class="card">
+<h2>Del skærm med QR-kode</h2>
+<p class="sub">Klik "Start skærmdeling", vælg det vindue eller den fane hvor en QR-kode vises (fx jeres kasseapparat). Koden sendes automatisk til kundeskærmen, når den aflæses.</p>
+<div class="status-row">
+<span class="dot" id="captureDot"></span>
+<span class="status-text" id="captureStatusText">Skærmdeling stoppet</span>
+</div>
+<div style="position:relative;width:100%;max-width:360px;aspect-ratio:16/9;background:#0d1b18;border-radius:16px;overflow:hidden;margin:16px 0;">
+<video id="screenVideo" playsinline muted style="width:100%;height:100%;object-fit:contain;display:block;"></video>
+<div id="screenPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(220,242,232,0.7);font-size:13px;text-align:center;padding:20px;gap:6px;">
+<span style="font-size:28px;">🖥️</span>
+<span>Ingen skærm delt endnu</span>
+</div>
+</div>
+<label for="captureReadValue">Sidst aflæste kode</label>
+<input type="text" id="captureReadValue" readonly value="—">
+<div class="actions">
+<button class="primary" id="captureStartBtn">Start skærmdeling</button>
+<button class="ghost" id="captureStopBtn" style="display:none;">Stop skærmdeling</button>
+<button class="toggle is-live" id="capturePushToggle">Send til kundeskærm: til</button>
+</div>
+<p class="helper" id="capturePushStatus">Sender aflæst kode live til kundeskærm</p>
+<div class="save-msg" id="captureErr" style="color:#B4453A;"></div>
+</div>
 
-      <div class="card">
-        <h2>Eller: del en skærm</h2>
-        <p class="sub">Alternativ til ovenstående — del et vindue eller en skærm hvor en QR-kode vises (fx jeres eget kasseapparat). Bruges kun til QR-koder I selv har fuld kontrol over.</p>
-        <div class="status-row">
-          <span class="dot" id="captureDot"></span>
-          <span class="status-text" id="captureStatusText">Skærmdeling stoppet</span>
-        </div>
-        <div style="position:relative;width:100%;max-width:360px;aspect-ratio:1;background:#0d1b18;border-radius:16px;overflow:hidden;margin:16px 0;">
-          <video id="screenVideo" playsinline muted style="width:100%;height:100%;object-fit:contain;display:block;"></video>
-          <div id="screenPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(220,242,232,0.7);font-size:13px;text-align:center;padding:20px;gap:6px;">
-            <span>Ingen skærm delt endnu</span>
-          </div>
-        </div>
-        <label for="captureReadValue">Sidst aflæste kode</label>
-        <input type="text" id="captureReadValue" readonly value="—">
-        <div class="actions">
-          <button class="primary" id="captureStartBtn">Del skærm</button>
-          <button class="ghost" id="captureStopBtn" style="display:none;">Stop</button>
-          <button class="ghost" id="capturePushToggle">Send til kundeskærm: fra</button>
-        </div>
-        <p class="helper" id="capturePushStatus">Sender ikke til kundeskærm</p>
-        <div class="save-msg" id="captureErr" style="color:#B4453A;"></div>
-      </div>
-    </section>
-  </main>
+<div class="card">
+<h2>Eller: hent fra en URL</h2>
+<p class="sub">Har I en side med en QR-kode I selv kontrollerer? Indsæt adressen herunder.</p>
+<label for="captureSourceUrl">Side- eller billed-URL</label>
+<input type="text" id="captureSourceUrl" placeholder="https://jeres-side.dk/side-med-qr">
+<div class="actions">
+<button class="primary" id="captureFetchNowBtn">Hent nu</button>
+<button class="ghost" id="captureSaveUrlBtn">Gem adresse</button>
+</div>
+<div class="status-row" style="margin-top:14px;">
+<span>Hold automatisk opdateret (hvert 20. sek.)</span>
+<button class="toggle" id="captureAutoToggle">Slå til</button>
+</div>
+<div class="row" style="margin-top:14px;">
+<div>
+<label>Status</label>
+<input type="text" id="captureUrlStatus" readonly>
+</div>
+<div>
+<label>Sidst tjekket</label>
+<input type="text" id="captureUrlChecked" readonly>
+</div>
+</div>
+<div class="save-msg" id="captureUrlErr" style="color:#B4453A;"></div>
+</div>
+</section>
+</main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
