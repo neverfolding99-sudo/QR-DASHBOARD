@@ -11,7 +11,7 @@ let socketConnected = false;
 let qrInstance = null;
 
 function signatureOf(state){
-return JSON.stringify([state.live, state.target, state.sessionId, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody]);
+return JSON.stringify([state.live, state.target, state.sessionId, state.title, state.message, state.bg, state.offlineTitle, state.offlineBody, state.aboveText]);
 }
 
 function drawQR(url){
@@ -58,14 +58,13 @@ const qrBox = document.getElementById('qrBox');
 const offlineMsg = document.getElementById('offlineMsg');
 const title = document.getElementById('title');
 const msg = document.getElementById('msg');
-const liveBadge = document.getElementById('liveBadge');
-
-liveBadge.classList.toggle('show', !!state.live);
 
 if(state.live){
 qrBox.style.display = 'inline-block';
 offlineMsg.style.display = 'none';
 title.textContent = state.title || 'Scan for dit tilbud';
+const aboveTextEl = document.getElementById('aboveText');
+if(aboveTextEl) aboveTextEl.textContent = state.aboveText || '';
 msg.textContent = state.message || '';
 
 const url = state.target && state.target.trim()
