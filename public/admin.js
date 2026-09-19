@@ -163,6 +163,7 @@ function render(){
   document.getElementById('qrTarget').value = state.target || '';
   document.getElementById('stopTitle').value = state.title || '';
   document.getElementById('stopMsg').value = state.message || '';
+document.getElementById('aboveQrText').value = state.aboveText || '';
   document.getElementById('sessionId').value = state.sessionId || '';
   document.getElementById('lastUpdated').value = fmtTime(state.lastUpdated);
 
@@ -183,6 +184,7 @@ function render(){
     qrBox.style.display = 'inline-block';
     offlineMsg.style.display = 'none';
     document.getElementById('previewTitle').textContent = state.title || 'Scan for dit tilbud';
+const prevAbove = document.getElementById('previewAboveText'); if(prevAbove) prevAbove.textContent = state.aboveText || '';
     document.getElementById('previewMsg').textContent = state.message || '';
     renderQR();
   } else {
@@ -285,7 +287,8 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const target = document.getElementById('qrTarget').value.trim();
   const title = document.getElementById('stopTitle').value.trim() || 'Scan for dit tilbud';
   const message = document.getElementById('stopMsg').value.trim();
-  state = await apiPost('/api/state', { target, title, message });
+  const aboveText = document.getElementById('aboveQrText').value.trim();
+state = await apiPost('/api/state', { target, title, message, aboveText });
   render();
   flashSave('saveMsg');
 });
